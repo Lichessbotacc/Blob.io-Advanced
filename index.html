@@ -103,9 +103,16 @@ canvas{display:block;position:fixed;top:0;left:0;touch-action:manipulation}
 .ttrp{background:rgba(255,71,87,.5)}
 
 /* ── MAIN OVERLAY ─────────────────────────────── */
-#overlay{position:fixed;inset:0;z-index:20;display:flex;align-items:center;
-  justify-content:center;overflow-y:auto;
-  background:radial-gradient(ellipse at 40% 30%,#1a103a 0%,#080810 70%)}
+#overlay{
+  position:fixed;
+  inset:0;
+  z-index:20;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  overflow-y:auto;
+  background:radial-gradient(ellipse at 40% 30%,#1a103a 0%,#080810 70%);
+}
 #overlay::before{content:'';position:fixed;inset:0;z-index:0;
   background:
     radial-gradient(circle at 20% 20%,rgba(139,124,248,.12) 0%,transparent 50%),
@@ -119,7 +126,9 @@ canvas{display:block;position:fixed;top:0;left:0;touch-action:manipulation}
 .oc{width:540px;max-width:96vw;padding:20px;
   display:flex;flex-direction:column;gap:14px;position:relative;z-index:1;
   padding-top:max(20px,env(safe-area-inset-top));
-  padding-bottom:max(20px,env(safe-area-inset-bottom))}
+  padding-bottom:max(20px,env(safe-area-inset-bottom))max-height:100vh;
+overflow-y:auto;
+-webkit-overflow-scrolling:touch;}
 
 /* LOGO */
 .logo{text-align:center}
@@ -166,7 +175,9 @@ input.name-in:focus{border-color:var(--accent)}
   justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(5px)}
 .sbox{width:420px;max-width:95vw;max-height:88vh;overflow-y:auto;
   background:#0e0e22;border:1px solid rgba(139,124,248,.25);
-  border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+  border-radius:16px;padding:24px;box-shadow:var(--shadow)max-height:85vh;
+overflow-y:auto;
+-webkit-overflow-scrolling:touch;}
 .sbox h2{font-size:19px;font-weight:900;text-align:center;margin-bottom:18px}
 .ssec{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);
   margin:16px 0 6px;font-weight:800}
