@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<title>Blob.io — Offline Pro</title>
+<style>
+:root{
+  --bg:#0b0b16;--bg2:#12122a;--panel:rgba(14,14,32,0.92);
+  --border:rgba(130,100,255,0.22);--accent:#8b7cf8;--accent2:#00d9ff;
+  --green:#00e676;--red:#ff4757;--yellow:#ffd740;--orange:#ff9f43;
+  --shadow:0 12px 48px rgba(0,0,0,.75);--r:12px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:#fff;touch-action:none}
+canvas{display:block;position:fixed;top:0;left:0;touch-action:none}
+
+/* GLASSMORPHISM */
+.glass{background:var(--panel);border:1px solid var(--border);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-radius:var(--r);box-shadow:var(--shadow)}
+
+/* HUD */
+#hud{position:fixed;top:14px;left:14px;z-index:10;padding:10px 16px;
+  padding-top:max(10px,env(safe-area-inset-top));min-width:130px}
+#hud .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);font-weight:600}
+#hud .mv{font-size:24px;font-weight:900;color:var(--accent2);line-height:1.1;font-variant-numeric:tabular-nums}
+#hud .badge{display:inline-block;margin-top:5px;padding:2px 10px;border-radius:20px;
+  font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+
+/* LEADERBOARD */
+#lb{position:fixed;top:14px;right:14px;z-index:10;padding:12px 16px;min-width:175px;
+  padding-top:max(12px,env(safe-area-inset-top))}
+#lb h3{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--yellow);margin-bottom:8px}
+.lbr{display:flex;align-items:center;gap:7px;padding:2px 0;font-size:12px}
+.lbr .rk{font-size:10px;color:rgba(255,255,255,.35);min-width:14px}
+.lbr .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.lbr .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lbr .nm.me{color:var(--yellow);font-weight:800}
+.lbr .ms{font-size:11px;color:rgba(255,255,255,.55);font-variant-numeric:tabular-nums}
+
+/* TOP CENTER (settings btn + spec banner) */
+#topCenter{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:12;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding-top:max(0px,env(safe-area-inset-top))}
+#settingsBtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);
+  background:var(--panel);color:#fff;font-size:17px;cursor:pointer;
+  backdrop-filter:blur(12px);transition:all .2s;display:none;align-items:center;justify-content:center}
+#settingsBtn:hover{background:var(--accent);transform:rotate(40deg)}
+#settingsBtn.vis{display:flex}
+#specBanner{padding:7px 18px;border-radius:24px;font-size:13px;
+  display:none;align-items:center;gap:12px;white-space:nowrap}
+#specBanner button{background:var(--accent);border:none;color:#fff;
+  padding:5px 14px;border-radius:12px;font-size:11px;font-weight:800;cursor:pointer}
+
+/* ZONE WARNING */
+#zoneWarn{position:fixed;top:60px;left:50%;transform:translateX(-50%);
+  background:rgba(255,50,50,.9);color:#fff;padding:7px 22px;border-radius:20px;
+  font-size:13px;font-weight:800;z-index:15;display:none;pointer-events:none;
+  animation:pulse .5s ease infinite alternate}
+@keyframes pulse{from{opacity:.7}to{opacity:1}}
+
+/* EVENT BANNER */
+#evtBanner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  text-align:center;z-index:15;pointer-events:none;display:none;
+  transition:opacity .4s}
+#evtBanner .et{font-size:40px;font-weight:900;text-shadow:0 0 30px rgba(255,255,255,.5)}
+#evtBanner .ed{font-size:15px;color:rgba(255,255,255,.7);margin-top:6px}
+
+/* MINIMAP */
+#mm{position:fixed;bottom:14px;right:14px;z-index:10;overflow:hidden;
+  padding-bottom:max(0px,env(safe-area-inset-bottom));border-radius:10px}
+#mmC{display:block}
+
+/* TOUCH */
+#tc{position:fixed;bottom:0;left:0;z-index:15;display:none;gap:10px;padding:14px;
+  padding-bottom:max(14px,env(safe-area-inset-bottom))}
+#tc button{width:66px;height:66px;border-radius:50%;border:2px solid rgba(255,255,255,.25);
+  backdrop-filter:blur(8px);color:#fff;font-size:12px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;user-select:none;cursor:pointer;
+  -webkit-user-select:none}
+.tsplit{background:rgba(139,124,248,.6)}
+.tthrow{background:rgba(0,217,255,.4)}
+.tdbl{background:rgba(0,230,118,.4)}
+.ttrp{background:rgba(255,71,87,.5)}
+
+/* ── MAIN OVERLAY ─────────────────────────────── */
+#overlay{position:fixed;inset:0;z-index:20;display:flex;align-items:center;
+  justify-content:center;overflow-y:auto;
+  background:radial-gradient(ellipse at 40% 30%,#1a103a 0%,#080810 70%)}
+/* animated background blobs */
+#overlay::before{content:'';position:fixed;inset:0;z-index:0;
+  background:
+    radial-gradient(circle at 20% 20%,rgba(139,124,248,.12) 0%,transparent 50%),
+    radial-gradient(circle at 80% 70%,rgba(0,217,255,.1) 0%,transparent 50%),
+    radial-gradient(circle at 60% 10%,rgba(0,230,118,.07) 0%,transparent 40%);
+  animation:ambientMove 12s ease-in-out infinite alternate}
+@keyframes ambientMove{
+  0%{background-position:0 0,100% 70%,60% 10%}
+  100%{background-position:5% 5%,95% 65%,65% 15%}}
+
+.oc{width:540px;max-width:96vw;padding:20px;
+  display:flex;flex-direction:column;gap:14px;position:relative;z-index:1;
+  padding-top:max(20px,env(safe-area-inset-top));
+  padding-bottom:max(20px,env(safe-area-inset-bottom))}
+
+/* LOGO */
+.logo{text-align:center}
+.logo-title{font-size:52px;font-weight:900;letter-spacing:-2px;line-height:1;
+  background:linear-gradient(135deg,#c4b8ff 0%,var(--accent) 40%,var(--accent2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sub{font-size:11px;text-transform:uppercase;letter-spacing:3px;
+  color:rgba(255,255,255,.3);margin-top:4px}
+
+/* CARD */
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:14px 18px}
+.card-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.35);font-weight:600;margin-bottom:8px}
+input.name-in{width:100%;padding:11px 14px;font-size:16px;font-weight:700;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  border-radius:9px;color:#fff;outline:none;transition:border-color .2s}
+input.name-in:focus{border-color:var(--accent)}
+
+/* MODE GRID */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mc{padding:10px 12px;border-radius:10px;cursor:pointer;
+  background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.07);
+  transition:all .15s;display:flex;align-items:center;gap:9px;user-select:none}
+.mc:hover{background:rgba(139,124,248,.12);border-color:var(--accent)}
+.mc.active{background:rgba(139,124,248,.22);border-color:var(--accent);
+  box-shadow:0 0 0 1px rgba(139,124,248,.3) inset}
+.mc .mi{font-size:20px;flex-shrink:0}
+.mc .mn{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mc .md{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px}
+
+/* PLAY BUTTONS */
+.pbuts{display:flex;gap:10px}
+.bp{padding:14px;font-size:16px;font-weight:900;border:none;border-radius:10px;
+  color:#fff;cursor:pointer;transition:all .15s;letter-spacing:.5px}
+.bp-main{flex:2;background:linear-gradient(135deg,var(--accent) 0%,#6054d6 100%);
+  box-shadow:0 4px 24px rgba(139,124,248,.4)}
+.bp-main:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(139,124,248,.6)}
+.bp-sec{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
+.bp-sec:hover{background:rgba(255,255,255,.12)}
+.hint{text-align:center;color:rgba(255,255,255,.28);font-size:11px;line-height:1.9}
+.hint a{color:var(--accent);text-decoration:none}
+
+/* ── SETTINGS ─────────────────────────────────── */
+#sp{position:fixed;inset:0;z-index:30;display:none;align-items:center;
+  justify-content:center;background:rgba(0,0,0,.7);backdrop-filter:blur(5px)}
+.sbox{width:420px;max-width:95vw;max-height:88vh;overflow-y:auto;
+  background:#0e0e22;border:1px solid rgba(139,124,248,.25);
+  border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+.sbox h2{font-size:19px;font-weight:900;text-align:center;margin-bottom:18px}
+.ssec{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);
+  margin:16px 0 6px;font-weight:800}
+.sr{display:flex;align-items:center;gap:10px;margin:9px 0;font-size:13px}
+.sr label{flex:1;color:rgba(255,255,255,.8)}
+.sr input[type=range]{-webkit-appearance:none;appearance:none;width:120px;height:4px;
+  border-radius:2px;background:rgba(255,255,255,.15);outline:none;flex-shrink:0}
+.sr input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
+  border-radius:50%;background:var(--accent);cursor:pointer}
+.sr .v{width:44px;text-align:right;font-size:11px;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums}
+.tog{position:relative;width:44px;height:24px;border-radius:12px;background:rgba(255,255,255,.15);
+  cursor:pointer;transition:background .2s;flex-shrink:0}
+.tog.on{background:var(--accent)}
+.tok{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+  background:#fff;transition:left .2s;box-shadow:0 2px 6px rgba(0,0,0,.3)}
+.tog.on .tok{left:22px}
+.scls{display:block;width:100%;margin-top:18px;padding:12px;background:var(--accent);
+  border:none;color:#fff;border-radius:9px;font-size:15px;font-weight:800;cursor:pointer}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
+
+/* ── DEATH SCREEN ─────────────────────────────── */
+#ds{position:fixed;inset:0;z-index:25;display:none;align-items:center;
+  justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(8px)}
+.dbox{text-align:center;padding:36px 44px;background:#100e20;
+  border:1px solid rgba(255,71,87,.35);border-radius:18px;
+  box-shadow:0 0 80px rgba(255,71,87,.12);animation:popIn .25s ease}
+@keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
+.dbox h2{font-size:34px;font-weight:900;color:var(--red);margin-bottom:6px}
+.dstats{color:rgba(255,255,255,.55);font-size:14px;margin-bottom:22px;line-height:2.1}
+.dstats b{color:#fff;font-weight:800}
+.dbuts{display:flex;gap:10px}
+
+/* BADGE COLORS */
+.b-ffa{background:#7c6ff7}.b-teams{background:#e53935}.b-br{background:#e67e22}
+.b-rush{background:#00bcd4}.b-virus{background:#2e7d32}.b-giant{background:#6a1b9a}
+.b-speed{background:#0288d1}.b-nano{background:#00695c}.b-dom{background:#c6a700}
+.b-chaos{background:#c62828}
+</style>
+</head>
+<body>
+<canvas id="gc"></canvas>
+
+<div id="hud" class="glass">
+  <div class="lbl">Masse</div>
+  <div class="mv" id="mv">0</div>
+  <div id="badge" class="badge b-ffa">FFA</div>
+</div>
+
+<div id="lb" class="glass"><h3>🏆 Bestenliste</h3><div id="lbc"></div></div>
+
+<div id="topCenter">
+  <button id="settingsBtn" title="Einstellungen">⚙️</button>
+  <div id="specBanner" class="glass">
+    <span>👁 <b id="specNm" style="color:var(--yellow)">—</b></span>
+    <button id="stopSpec">Mitspielen</button>
+  </div>
+</div>
+
+<div id="zoneWarn">⚠ VERLASSE DIE ZONE!</div>
+<div id="evtBanner"><div class="et" id="evtT"></div><div class="ed" id="evtD"></div></div>
+
+<div id="mm" class="glass"><canvas id="mmC" width="118" height="118"></canvas></div>
+
+<div id="tc">
+  <button class="tsplit" id="bSp">Split</button>
+  <button class="tthrow" id="bTh">W</button>
+  <button class="tdbl" id="bDb">×2</button>
+  <button class="ttrp" id="bTr">×3</button>
+</div>
+
+<!-- MAIN MENU -->
+<div id="overlay">
+  <div class="oc">
+    <div class="logo">
+      <div class="logo-title">Blob.io</div>
+      <div class="logo-sub">Offline Pro Edition</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Dein Name</div>
+      <input class="name-in" id="nin" maxlength="15" placeholder="Spieler" value="Spieler"/>
+    </div>
+    <div class="card">
+      <div class="card-label">Spielmodus</div>
+      <div class="mgrid" id="mgrid"></div>
+    </div>
+    <div class="pbuts">
+      <button class="bp bp-main" id="playBtn">▶ Spielen</button>
+      <button class="bp bp-sec" id="specBtn">👁 Zuschauen</button>
+    </div>
+    <div class="hint">
+      Maus / Touch = Bewegen &nbsp;·&nbsp; Leertaste = Split &nbsp;·&nbsp; W = Auswerfen<br>
+      D = ×2 Split &nbsp;·&nbsp; T = ×3 Split<br>
+      <a href="#" id="openSet">⚙ Einstellungen</a>
+    </div>
+  </div>
+</div>
+
+<!-- DEATH SCREEN -->
+<div id="ds">
+  <div class="dbox">
+    <h2>☠ Du bist tot!</h2>
+    <div class="dstats" id="dst"></div>
+    <div class="dbuts">
+      <button class="bp bp-main" id="respBtn" style="flex:2">↩ Nochmal</button>
+      <button class="bp bp-sec" id="menuBtn" style="flex:1">Menü</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="sp">
+  <div class="sbox">
+    <h2>⚙ Einstellungen</h2>
+    <div class="ssec">🌍 Welt</div>
+    <div class="sr"><label>Futter-Menge</label><input type="range" id="sFc" min="100" max="2000" step="50"><span class="v" id="sFcV"></span></div>
+    <div class="sr"><label>Virus-Anzahl</label><input type="range" id="sVc" min="5" max="80" step="1"><span class="v" id="sVcV"></span></div>
+    <div class="sr"><label>Welt-Größe</label><input type="range" id="sWs" min="3000" max="10000" step="500"><span class="v" id="sWsV"></span></div>
+
+    <div class="ssec">⚙ Mechanik</div>
+    <div class="sr"><label>Masseverlust</label><div class="tog" id="sMdT"><div class="tok"></div></div></div>
+    <div class="sr"><label>Verlustrate</label><input type="range" id="sMdr" min="1" max="10" step="1"><span class="v" id="sMdrV"></span></div>
+    <div class="sr"><label>Min. Teilmasse</label><input type="range" id="sMs" min="30" max="150" step="5"><span class="v" id="sMsV"></span></div>
+    <div class="sr"><label>Max. Teile/Spieler</label><input type="range" id="sMp" min="8" max="64" step="2"><span class="v" id="sMpV"></span></div>
+    <div class="sr"><label>Merge-Zeit</label><input type="range" id="sMt" min="60" max="600" step="10"><span class="v" id="sMtV"></span></div>
+    <div class="sr"><label>Geschwindigkeit</label><input type="range" id="sSm" min="5" max="30" step="1"><span class="v" id="sSmV"></span></div>
+    <div class="sr"><label>Viren teilen Spieler</label><div class="tog" id="sVsT"><div class="tok"></div></div></div>
+
+    <div class="ssec">🤖 Bots</div>
+    <div class="sr"><label>Anzahl Bots</label><input type="range" id="sBc" min="0" max="100" step="1"><span class="v" id="sBcV"></span></div>
+    <div class="sr"><label>Aggressivität</label><input type="range" id="sAg" min="1" max="10" step="1"><span class="v" id="sAgV"></span></div>
+    <div class="sr"><label>Intelligenz</label><input type="range" id="sIn" min="1" max="10" step="1"><span class="v" id="sInV"></span></div>
+
+    <div class="ssec">🎨 Grafik</div>
+    <div class="sr"><label>Partikel</label><div class="tog" id="sPaT"><div class="tok"></div></div></div>
+    <div class="sr"><label>Gitter</label><div class="tog" id="sGrT"><div class="tok"></div></div></div>
+    <div class="sr"><label>Namen</label><div class="tog" id="sNmT"><div class="tok"></div></div></div>
+    <div class="sr"><label>Masse auf Blob</label><div class="tog" id="sMbT"><div class="tok"></div></div></div>
+    <div class="sr"><label>Minimap</label><div class="tog" id="sMMT"><div class="tok"></div></div></div>
+
+    <div class="ssec">📱 Steuerung</div>
+    <div class="sr"><label>Touch-Buttons erzwingen</label><div class="tog" id="sTcT"><div class="tok"></div></div></div>
+
+    <button class="scls" id="sCls">Schließen</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  BLOB.IO — OFFLINE PRO  |  10 Game Modes | Smart Bots | Smooth Merge
+// ════════════════════════════════════════════════════════════════════
+
+const GC  = document.getElementById('gc');
+const ctx = GC.getContext('2d');
+const MC  = document.getElementById('mmC');
+const mctx= MC.getContext('2d');
+
+// ── CONSTANTS ────────────────────────────────────────────────────────
+const COLORS = [
+  '#e53935','#fb8c00','#fdd835','#43a047','#1e88e5',
+  '#5e35b1','#d81b60','#00897b','#3949ab','#7cb342',
+  '#00acc1','#f06292','#ff7043','#ab47bc','#4db6ac'
+];
+const TEAM_COLS = {
+  0:['#ef5350','#e53935','#c62828'],  // Red
+  1:['#42a5f5','#1e88e5','#1565c0'],  // Blue
+  2:['#66bb6a','#43a047','#2e7d32'],  // Green
+  3:['#ffee58','#fdd835','#f9a825'],  // Yellow
+};
+const BOT_NAMES = [
+  'BlobKing','Toxic','Zero','Rush','Titan','Fury','Shadow','WunWun','Solo','Splitz',
+  'Ghost','MegaBlob','Mars','Swift','Alpha','Hunter','Apex','Nova','Vortex','Crusher',
+  'Phantom','Reaper','Storm','Blaze','Quasar','Pulsar','Comet','Aegis','Nexus','Flux',
+  'Void','Echo','Delta','Sigma','Omega','Zeus','Thor','Loki','Ares','Hydra',
+  'Golem','Chaos','Pyro','Frost','Giga','Nano','Pico','Tera','Mega','Ultra'
+];
+const MODES = [
+  {id:'ffa',   icon:'⚔️', name:'Freier Kampf', desc:'Klassisches FFA',       badge:'b-ffa'  },
+  {id:'teams', icon:'🛡️', name:'Team Battle',  desc:'Rot vs. Blau',          badge:'b-teams'},
+  {id:'br',    icon:'☢️', name:'Battle Royale',desc:'Zone schrumpft!',       badge:'b-br'   },
+  {id:'rush',  icon:'⚡', name:'Rush Modus',   desc:'Alles schneller!',      badge:'b-rush' },
+  {id:'virus', icon:'🦠', name:'Virus Mayhem', desc:'Viren überall!',        badge:'b-virus'},
+  {id:'giant', icon:'👹', name:'Riesen-Modus', desc:'Alle starten groß',     badge:'b-giant'},
+  {id:'speed', icon:'💨', name:'Speed Blitz',  desc:'2× Geschwindigkeit',    badge:'b-speed'},
+  {id:'nano',  icon:'🔬', name:'Nano Modus',   desc:'Winzige Blobs',         badge:'b-nano' },
+  {id:'dom',   icon:'🏆', name:'Herrschaft',   desc:'Zonen kontrollieren',   badge:'b-dom'  },
+  {id:'chaos', icon:'🌪️',name:'Extremchaos',  desc:'Zufalls-Events!',       badge:'b-chaos'},
+];
+
+// ── SETTINGS ─────────────────────────────────────────────────────────
+const DEF = {
+  foodCount:1500, virusCount:20, worldSize:5000,
+  massDecay:true, massDecayRate:3, minSplitMass:36,
+  maxPieces:32, mergeTime:220, speedMult:10,
+  virusSplit:true, botCount:20, botAggression:7, botIntelligence:7,
+  particles:true, grid:true, showNames:true, showMassOnBlob:true,
+  minimap:true, touchControls:false,
+};
+let cfg = {...DEF};
+
+// ── GAME STATE ────────────────────────────────────────────────────────
+let W = innerWidth, H = innerHeight;
+let running=false, spectating=false, curMode='ffa';
+let players=[], foods=[], viruses=[], ejected=[], particles=[];
+let me=null;
+let safeZone=null, zones=[], chaosCooldown=5000;
+let gameStart=0;
+
+const cam = {x:0,y:0,s:1,tx:0,ty:0,ts:1};
+const mouse = {x:W/2,y:H/2};
+let moveTid=null;
+
+// ── UTILS ─────────────────────────────────────────────────────────────
+const rand  = (a,b)=>a+Math.random()*(b-a);
+const ri    = n=>Math.floor(Math.random()*n);
+const clamp = (v,lo,hi)=>v<lo?lo:v>hi?hi:v;
+const d2    = (ax,ay,bx,by)=>(ax-bx)**2+(ay-by)**2;
+const dist  = (ax,ay,bx,by)=>Math.hypot(ax-bx,ay-by);
+const mToR  = m=>Math.sqrt(m)*4.2;
+const WW    = ()=>cfg.worldSize;
+
+function speedFor(m){
+  let base = 2.2*Math.pow(m,-0.22)*4.0*(cfg.speedMult/10);
+  if(curMode==='rush')  base*=1.6;
+  if(curMode==='speed') base*=2.1;
+  if(curMode==='nano')  base*=0.65;
+  return base;
+}
+function decayMult(){ return curMode==='rush'?2.5:curMode==='giant'?1.2:1; }
+function initMass(isBot){
+  if(isBot){
+    if(curMode==='giant') return rand(900,2000);
+    if(curMode==='nano')  return rand(2,10);
+    return rand(10,120);
+  }
+  if(curMode==='giant') return rand(1000,1500);
+  if(curMode==='nano')  return rand(3,8);
+  if(curMode==='rush')  return rand(20,50);
+  return 50;
+}
+function lighten(hex,amt){
+  const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  return `#${Math.min(255,r+amt).toString(16).padStart(2,'0')}${Math.min(255,g+amt).toString(16).padStart(2,'0')}${Math.min(255,b+amt).toString(16).padStart(2,'0')}`;
+}
+function fmtMass(m){ return m>=1000?(m/1000).toFixed(1)+'k':Math.floor(m).toString(); }
+function pMass(p){ return p.pieces.reduce((s,c)=>s+c.mass,0); }
+function pCenter(p){
+  let x=0,y=0,m=0;
+  for(const c of p.pieces){x+=c.x*c.mass;y+=c.y*c.mass;m+=c.mass;}
+  return m>0?{x:x/m,y:y/m}:{x:WW()/2,y:WW()/2};
+}
+function bigPiece(p){ return p.pieces.reduce((a,b)=>b.mass>a.mass?b:a,p.pieces[0]); }
+
+// ── ENTITY FACTORIES ─────────────────────────────────────────────────
+function mkFood(){
+  const W2=WW();
+  return{x:rand(15,W2-15),y:rand(15,W2-15),r:5,color:COLORS[ri(COLORS.length)],mass:1};
+}
+function mkVirus(){
+  const W2=WW();
+  return{x:rand(200,W2-200),y:rand(200,W2-200),mass:100,color:'#33d17a'};
+}
+function mkPiece(p,x,y,mass,vx=0,vy=0,mt=0){
+  return{player:p,x,y,mass,vx,vy,mergeTimer:mt};
+}
+function mkPlayer(name,isBot,teamId=-1){
+  const W2=WW();
+  let color = teamId>=0 ? TEAM_COLS[teamId][ri(3)] : COLORS[ri(COLORS.length)];
+  const p={name,isBot,dead:false,color,teamId,pieces:[],
+    target:{x:W2/2,y:W2/2},aiNext:0,aiSplitCool:0,kills:0,maxMass:0,score:0};
+  const x=rand(500,W2-500), y=rand(500,W2-500);
+  p.pieces.push(mkPiece(p,x,y,initMass(isBot)));
+  p.target.x=x; p.target.y=y;
+  return p;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────
+function initGame(name,isSpec){
+  spectating=isSpec; gameStart=performance.now();
+  players=[]; foods=[]; viruses=[]; ejected=[]; particles=[];
+  zones=[]; safeZone=null; chaosCooldown=6000;
+  const W2=WW();
+  const fc=curMode==='nano'?Math.floor(cfg.foodCount*.6):cfg.foodCount;
+  for(let i=0;i<fc;i++) foods.push(mkFood());
+  const vc=curMode==='virus'?cfg.virusCount*4:cfg.virusCount;
+  for(let i=0;i<vc;i++) viruses.push(mkVirus());
+
+  if(curMode==='br'){
+    safeZone={x:W2/2,y:W2/2,r:W2*.46,minR:W2*.04,shrinkDelay:14000};
+  }
+  if(curMode==='dom'){
+    const pts=[[.2,.2],[.8,.2],[.5,.5],[.2,.8],[.8,.8]];
+    for(const[rx,ry] of pts) zones.push({x:W2*rx,y:W2*ry,r:110,owner:null,prog:0,color:'#888'});
+  }
+
+  const shuffled=BOT_NAMES.slice().sort(()=>Math.random()-.5);
+  for(let i=0;i<cfg.botCount;i++){
+    let tid=-1;
+    if(curMode==='teams') tid=i%2;
+    const b=mkPlayer(shuffled[i%shuffled.length],true,tid);
+    players.push(b);
+  }
+
+  if(!isSpec){
+    let tid=-1;
+    if(curMode==='teams') tid=1;
+    me=mkPlayer(name||'Spieler',false,tid);
+    me.color=curMode==='teams'?'#42a5f5':'#1e88e5';
+    players.push(me);
+  } else { me=null; }
+}
+
+// ── PHYSICS ───────────────────────────────────────────────────────────
+function movePlayer(p,dt){
+  const W2=WW();
+  for(const c of p.pieces){
+    if(c.mergeTimer>0) c.mergeTimer=Math.max(0,c.mergeTimer-dt);
+    const dx=p.target.x-c.x, dy=p.target.y-c.y;
+    const d=Math.hypot(dx,dy)||1;
+    const spd=speedFor(c.mass);
+    c.x+=(dx/d)*Math.min(spd,d*.16)+c.vx;
+    c.y+=(dy/d)*Math.min(spd,d*.16)+c.vy;
+    c.vx*=.86; c.vy*=.86;
+    if(Math.abs(c.vx)<.04)c.vx=0; if(Math.abs(c.vy)<.04)c.vy=0;
+    const r=mToR(c.mass);
+    c.x=clamp(c.x,r,W2-r); c.y=clamp(c.y,r,W2-r);
+  }
+
+  // Piece-to-piece: push apart (timer>0) or smooth merge (timer=0)
+  for(let i=0;i<p.pieces.length;i++){
+    for(let j=i+1;j<p.pieces.length;j++){
+      const a=p.pieces[i], b=p.pieces[j];
+      const ra=mToR(a.mass), rb=mToR(b.mass);
+      const dx=b.x-a.x, dy=b.y-a.y;
+      const d=Math.hypot(dx,dy)||.001;
+      const nx=dx/d, ny=dy/d;
+
+      if(a.mergeTimer===0&&b.mergeTimer===0){
+        if(d<(ra+rb)*.5){
+          // Close enough: smooth mass transfer (15% per frame)
+          const [sm,lg]=a.mass<b.mass?[a,b]:[b,a];
+          const tr=Math.min(sm.mass,sm.mass*.18+.3);
+          sm.mass-=tr; lg.mass+=tr;
+          if(sm.mass<1){
+            lg.mass+=sm.mass;
+            const idx=p.pieces.indexOf(sm);
+            if(idx!==-1){ p.pieces.splice(idx,1); if(idx<=i)i--; j=i; break; }
+          }
+        } else if(d<ra+rb+90){
+          // Attract toward each other (smooth merge approach)
+          const str=Math.min(4,(ra+rb+90-d)*.05+.4);
+          a.x+=nx*str; a.y+=ny*str;
+          b.x-=nx*str; b.y-=ny*str;
+        }
+      } else {
+        // Repel (splitting phase)
+        const ov=(ra+rb)-d;
+        if(ov>0){
+          const ms=a.mass+b.mass;
+          const pA=ov*(b.mass/ms)*.6, pB=ov*(a.mass/ms)*.6;
+          a.x-=nx*pA; a.y-=ny*pA;
+          b.x+=nx*pB; b.y+=ny*pB;
+        }
+      }
+    }
+  }
+}
+
+function splitPlayer(p){
+  if(p.pieces.length>=cfg.maxPieces) return false;
+  const np=[]; let split=false;
+  for(const c of p.pieces){
+    if(p.pieces.length+np.length>=cfg.maxPieces) break;
+    if(c.mass<cfg.minSplitMass) continue;
+    const half=c.mass/2; c.mass=half;
+    const dx=p.target.x-c.x, dy=p.target.y-c.y;
+    const d=Math.hypot(dx,dy)||1;
+    const boost=22+mToR(half)*.35;
+    c.mergeTimer=cfg.mergeTime;
+    np.push(mkPiece(p,c.x,c.y,half,(dx/d)*boost,(dy/d)*boost,cfg.mergeTime));
+    split=true;
+  }
+  p.pieces.push(...np); return split;
+}
+function multiSplit(p,times){
+  let c=0;
+  const run=()=>{ if(c>=times)return; splitPlayer(p); c++; if(c<times)setTimeout(run,38); };
+  run();
+}
+function ejectMass(p){
+  const EJ=12;
+  for(const c of p.pieces){
+    if(c.mass<EJ+20) continue;
+    c.mass-=EJ;
+    const dx=p.target.x-c.x, dy=p.target.y-c.y;
+    const d=Math.hypot(dx,dy)||1, r=mToR(c.mass);
+    ejected.push({x:c.x+(dx/d)*r,y:c.y+(dy/d)*r,vx:(dx/d)*22,vy:(dy/d)*22,
+      mass:EJ,color:p.color,life:110,age:0});
+  }
+}
+
+// ── BOT AI ────────────────────────────────────────────────────────────
+function botUpdate(b,now){
+  if(now<b.aiNext)return;
+  const aggr=cfg.botAggression/10, intel=cfg.botIntelligence/10;
+  b.aiNext=now+rand(12,45)*(1.1-intel*.8);
+  if(b.aiSplitCool>0) b.aiSplitCool-=(now-b.aiNext+rand(12,45));
+
+  const cen=pCenter(b), big=bigPiece(b), W2=WW();
+
+  // ── BATTLE ROYALE: flee zone edge ─────────────────────────────
+  if(curMode==='br'&&safeZone){
+    const dz=dist(cen.x,cen.y,safeZone.x,safeZone.y);
+    if(dz>safeZone.r*.82){
+      b.target.x=safeZone.x+rand(-safeZone.r*.25,safeZone.r*.25);
+      b.target.y=safeZone.y+rand(-safeZone.r*.25,safeZone.r*.25);
+      clampTgt(b.target); return;
+    }
+  }
+
+  // ── DOMINATION: capture nearest uncaptured zone ────────────────
+  if(curMode==='dom'&&zones.length){
+    const best=zones.filter(z=>z.owner!==b)
+      .sort((a,z)=>dist(cen.x,cen.y,a.x,a.y)-dist(cen.x,cen.y,z.x,z.y))[0];
+    if(best&&dist(cen.x,cen.y,best.x,best.y)>best.r*1.5){
+      b.target.x=best.x; b.target.y=best.y; clampTgt(b.target); return;
+    }
+  }
+
+  // ── PRIORITY 1: FLEE DANGER ────────────────────────────────────
+  const dangerThresh=1.22;
+  for(const p of players){
+    if(p===b||p.dead) continue;
+    if(curMode==='teams'&&p.teamId===b.teamId&&b.teamId>=0) continue;
+    const pm=bigPiece(p);
+    if(pm.mass>big.mass*dangerThresh){
+      const d=dist(pm.x,pm.y,cen.x,cen.y);
+      if(d<380+mToR(pm.mass)*2.2){
+        b.target.x=cen.x+(cen.x-pm.x)*2.8;
+        b.target.y=cen.y+(cen.y-pm.y)*2.8;
+        clampTgt(b.target); return;
+      }
+    }
+  }
+
+  // ── PRIORITY 1.5: MERGE REFLEX ────────────────────────────────
+  if(b.pieces.length>1&&b.pieces.every(pc=>pc.mergeTimer===0)){
+    b.target.x=cen.x; b.target.y=cen.y; return;
+  }
+
+  // ── PRIORITY 2: HUNT PREY ─────────────────────────────────────
+  let bestPrey=null, bestScore=-Infinity;
+  for(const p of players){
+    if(p===b||p.dead) continue;
+    if(curMode==='teams'&&p.teamId===b.teamId&&b.teamId>=0) continue;
+    const pc2=pCenter(p);
+    if(dist(cen.x,cen.y,pc2.x,pc2.y)>1200) continue;
+    for(const tp of p.pieces){
+      if(big.mass<=tp.mass*1.18) continue;
+      const d=dist(tp.x,tp.y,cen.x,cen.y);
+      const score=(tp.mass*2.5)/(d+1);
+      if(score>bestScore){bestScore=score;bestPrey=tp;}
+    }
+  }
+
+  if(bestPrey){
+    b.target.x=bestPrey.x; b.target.y=bestPrey.y;
+
+    // LOGICAL SPLIT DECISION
+    if(b.pieces.length<cfg.maxPieces-2&&b.aiSplitCool<=0){
+      const d=dist(cen.x,cen.y,bestPrey.x,bestPrey.y);
+      const splitRange=mToR(big.mass)*(10+aggr*10);
+      if(d<splitRange){
+        const m2=big.mass/2, m4=big.mass/4, m8=big.mass/8;
+        const ratio=1.20;
+        // Only split if resulting piece is big enough to eat target
+        if(m8>bestPrey.mass*ratio&&b.pieces.length+8<=cfg.maxPieces&&aggr>0.55){
+          multiSplit(b,3); b.aiSplitCool=rand(2200,4000);
+        } else if(m4>bestPrey.mass*ratio&&b.pieces.length+4<=cfg.maxPieces&&aggr>0.35){
+          multiSplit(b,2); b.aiSplitCool=rand(1400,2600);
+        } else if(m2>bestPrey.mass*ratio){
+          splitPlayer(b); b.aiSplitCool=rand(700,1400);
+        }
+      }
+    }
+    clampTgt(b.target); return;
+  }
+
+  // ── PRIORITY 3: VIRUS HUNT (if massive enough) ────────────────
+  if(big.mass>=135&&b.pieces.length<cfg.maxPieces-3&&curMode!=='nano'){
+    let nv=null, nd=700;
+    for(const v of viruses){
+      const d=dist(v.x,v.y,cen.x,cen.y);
+      if(d<nd){nd=d;nv=v;}
+    }
+    if(nv){b.target.x=nv.x;b.target.y=nv.y;clampTgt(b.target);return;}
+  }
+
+  // ── PRIORITY 4: EAT FOOD ──────────────────────────────────────
+  let bf=null, fd=Infinity;
+  const sample=Math.min(60,foods.length);
+  for(let i=0;i<sample;i++){
+    const f=foods[ri(foods.length)]; if(!f)continue;
+    const d=dist(f.x,f.y,cen.x,cen.y);
+    if(d<fd){fd=d;bf=f;}
+  }
+  if(bf){b.target.x=bf.x;b.target.y=bf.y;}
+  clampTgt(b.target);
+}
+function clampTgt(t){const W2=WW();t.x=clamp(t.x,100,W2-100);t.y=clamp(t.y,100,W2-100);}
+
+// ── EATING / COLLISION ────────────────────────────────────────────────
+function eatFood(){
+  for(const p of players){
+    if(p.dead)continue;
+    for(const c of p.pieces){
+      const r=mToR(c.mass), r2=r*r;
+      for(let i=foods.length-1;i>=0;i--){
+        const f=foods[i];
+        if(d2(c.x,c.y,f.x,f.y)<r2){
+          c.mass+=f.mass;
+          if(cfg.particles&&Math.random()<.3) spawnP(f.x,f.y,f.color,2);
+          foods[i]=mkFood();
+        }
+      }
+      for(let i=ejected.length-1;i>=0;i--){
+        const e=ejected[i];
+        if(e.age<18)continue;
+        if(d2(c.x,c.y,e.x,e.y)<r2){c.mass+=e.mass;ejected.splice(i,1);}
+      }
+    }
+  }
+}
+
+function virusHit(){
+  if(!cfg.virusSplit)return;
+  for(const p of players){
+    if(p.dead)continue;
+    for(let pi=0;pi<p.pieces.length;pi++){
+      const c=p.pieces[pi];
+      if(c.mass<130)continue;
+      const r=mToR(c.mass);
+      for(let vi=viruses.length-1;vi>=0;vi--){
+        const v=viruses[vi];
+        if(dist(c.x,c.y,v.x,v.y)<r){
+          viruses[vi]=mkVirus();
+          const maxN=Math.min(cfg.maxPieces-p.pieces.length,7);
+          if(maxN<=0)continue;
+          c.mass+=100;
+          const nm=c.mass/(maxN+1);
+          c.mass=nm; c.mergeTimer=280;
+          for(let k=0;k<maxN;k++){
+            const ang=Math.random()*Math.PI*2, f=rand(14,27);
+            p.pieces.push(mkPiece(p,c.x,c.y,nm,Math.cos(ang)*f,Math.sin(ang)*f,280));
+          }
+          if(cfg.particles) spawnP(c.x,c.y,'#33d17a',14);
+        }
+      }
+    }
+  }
+}
+
+function eatPlayers(){
+  for(const p of players){
+    if(p.dead)continue;
+    for(const c of p.pieces){
+      const r=mToR(c.mass);
+      for(const q of players){
+        if(q===p||q.dead)continue;
+        if(curMode==='teams'&&q.teamId===p.teamId&&p.teamId>=0)continue;
+        const qc=pCenter(q);
+        if(dist(c.x,c.y,qc.x,qc.y)>r+mToR(pMass(q)))continue;
+        for(let i=q.pieces.length-1;i>=0;i--){
+          const t=q.pieces[i];
+          if(c.mass<t.mass*1.15)continue;
+          const eaten=(r-mToR(t.mass)*.45);
+          if(d2(c.x,c.y,t.x,t.y)<eaten*eaten){
+            c.mass+=t.mass;
+            if(cfg.particles) spawnP(t.x,t.y,q.color,16);
+            q.pieces.splice(i,1);
+          }
+        }
+        if(q.pieces.length===0){q.dead=true;p.kills++;}
+      }
+    }
+  }
+}
+
+function applyDecay(dt){
+  if(!cfg.massDecay)return;
+  const rate=(cfg.massDecayRate/800)*decayMult()*(dt/16.67);
+  for(const p of players){
+    if(p.dead)continue;
+    for(const c of p.pieces){
+      if(curMode==='nano'&&c.mass<25)continue;
+      if(c.mass>140) c.mass-=c.mass*rate;
+    }
+  }
+}
+
+function applyBR(dt){
+  if(!safeZone)return;
+  const elapsed=performance.now()-gameStart;
+  if(elapsed>safeZone.shrinkDelay){
+    const prog=Math.min(1,(elapsed-safeZone.shrinkDelay)/110000);
+    safeZone.r=safeZone.r+(safeZone.minR-safeZone.r)*prog*.003*(dt/16.67);
+  }
+  let ouside=false;
+  for(const p of players){
+    if(p.dead)continue;
+    for(const c of p.pieces){
+      if(dist(c.x,c.y,safeZone.x,safeZone.y)>safeZone.r){
+        c.mass*=1-(.007*(dt/16.67));
+        if(p===me)ouside=true;
+      }
+    }
+  }
+  document.getElementById('zoneWarn').style.display=ouside?'block':'none';
+}
+
+function updateDom(dt){
+  if(curMode!=='dom')return;
+  for(const z of zones){
+    const inZ=[];
+    for(const p of players){
+      if(p.dead)continue;
+      const c=pCenter(p);
+      if(dist(c.x,c.y,z.x,z.y)<z.r+60) inZ.push(p);
+    }
+    if(inZ.length===1){
+      z.prog=Math.min(1,z.prog+.0018*(dt/16.67));
+      if(z.prog>=1&&z.owner!==inZ[0]){
+        z.owner=inZ[0]; z.color=inZ[0].color;
+        for(const c of inZ[0].pieces) c.mass+=18;
+        inZ[0].score++;
+      }
+    } else if(inZ.length===0&&z.prog>0){
+      z.prog=Math.max(0,z.prog-.001*(dt/16.67));
+    }
+    z.inZ=inZ;
+  }
+}
+
+const CHAOS_EVENTS=[
+  {t:'💥 EXPLOSION!',   d:'Alle werden gesplittet!',  fn:()=>{for(const p of players)if(!p.dead)multiSplit(p,2);}},
+  {t:'🍔 BUFFET!',      d:'Futter-Regen!',            fn:()=>{for(let i=0;i<600;i++)foods.push(mkFood());}},
+  {t:'💀 HUNGERSNOT!',  d:'Alles Futter verschwunden!',fn:()=>{foods=foods.slice(0,30);}},
+  {t:'🔄 MASSENSCHWUND',d:'Alle verlieren 35% Masse!', fn:()=>{for(const p of players)if(!p.dead)for(const c of p.pieces)c.mass*=.65;}},
+  {t:'🦠 VIRENFLUT!',   d:'Viren überall!',           fn:()=>{for(let i=0;i<30;i++)viruses.push(mkVirus());}},
+  {t:'👑 MASSENBOOST!', d:'Alle gewinnen 50% Masse!',  fn:()=>{for(const p of players)if(!p.dead)for(const c of p.pieces)c.mass*=1.5;}},
+  {t:'🌀 TELEPORT!',    d:'Alle werden teleportiert!', fn:()=>{
+    const W2=WW();
+    for(const p of players)if(!p.dead){
+      const nx=rand(400,W2-400),ny=rand(400,W2-400);
+      for(const c of p.pieces){c.x=nx+rand(-60,60);c.y=ny+rand(-60,60);}
+      p.target.x=nx; p.target.y=ny;
+    }
+  }},
+  {t:'⚡ SUPER SPLIT!', d:'Jeder verliert die Hälfte der Masse durch Splits!',fn:()=>{
+    for(const p of players)if(!p.dead&&p.pieces.length<cfg.maxPieces-4)splitPlayer(p);
+  }},
+];
+
+function doChaos(){
+  const ev=CHAOS_EVENTS[ri(CHAOS_EVENTS.length)];
+  ev.fn();
+  const b=document.getElementById('evtBanner');
+  document.getElementById('evtT').textContent=ev.t;
+  document.getElementById('evtD').textContent=ev.d;
+  b.style.display='block'; b.style.opacity='1';
+  setTimeout(()=>{b.style.opacity='0';setTimeout(()=>{b.style.display='none';},400);},2800);
+}
+
+function respawnBots(){
+  for(const p of players){
+    if(p===me||!p.isBot||!p.dead)continue;
+    let tid=-1; if(curMode==='teams')tid=ri(2);
+    const nb=mkPlayer(BOT_NAMES[ri(BOT_NAMES.length)],true,tid);
+    Object.assign(p,nb); p.dead=false;
+  }
+}
+
+// ── PARTICLES ─────────────────────────────────────────────────────────
+function spawnP(x,y,color,count){
+  for(let i=0;i<count;i++){
+    const ang=Math.random()*Math.PI*2, spd=rand(1.5,5.5);
+    particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
+      color,life:rand(14,32),maxLife:32,r:rand(2,6)});
+  }
+}
+
+// ── CAMERA ────────────────────────────────────────────────────────────
+function calcScale(p){ return Math.min(1.3,Math.pow(38/pMass(p),.22)*1.15); }
+function getCamTarget(){
+  if(!spectating&&me&&!me.dead)
+    return{cx:pCenter(me).x,cy:pCenter(me).y,s:calcScale(me),leader:me};
+  const alive=players.filter(p=>!p.dead).sort((a,b)=>pMass(b)-pMass(a));
+  if(alive[0]){
+    if(spectating) document.getElementById('specNm').textContent=alive[0].name;
+    return{cx:pCenter(alive[0]).x,cy:pCenter(alive[0]).y,s:calcScale(alive[0]),leader:alive[0]};
+  }
+  const W2=WW();
+  return{cx:W2/2,cy:W2/2,s:.22,leader:null};
+}
+function updCam(){
+  const t=getCamTarget();
+  cam.tx=t.cx; cam.ty=t.cy; cam.ts=t.s;
+  cam.x+=(cam.tx-cam.x)*.09;
+  cam.y+=(cam.ty-cam.y)*.09;
+  cam.s+=(cam.ts-cam.s)*.07;
+}
+function toSC(x,y){return[(x-cam.x)*cam.s+W/2,(y-cam.y)*cam.s+H/2];}
+
+// ── RENDERING ─────────────────────────────────────────────────────────
+function drawGrid(){
+  if(!cfg.grid)return;
+  ctx.strokeStyle='#dde4ee'; ctx.lineWidth=1;
+  const step=60;
+  const sx=Math.floor((cam.x-W/2/cam.s)/step)*step, ex=cam.x+W/2/cam.s;
+  const sy=Math.floor((cam.y-H/2/cam.s)/step)*step, ey=cam.y+H/2/cam.s;
+  ctx.beginPath();
+  for(let x=sx;x<ex;x+=step){const px=(x-cam.x)*cam.s+W/2;ctx.moveTo(px,0);ctx.lineTo(px,H);}
+  for(let y=sy;y<ey;y+=step){const py=(y-cam.y)*cam.s+H/2;ctx.moveTo(0,py);ctx.lineTo(W,py);}
+  ctx.stroke();
+  const[bx,by]=toSC(0,0);
+  ctx.strokeStyle='#e53935'; ctx.lineWidth=6;
+  ctx.strokeRect(bx,by,WW()*cam.s,WW()*cam.s);
+}
+
+function drawBR(){
+  if(!safeZone)return;
+  const[sx,sy]=toSC(safeZone.x,safeZone.y);
+  const r=safeZone.r*cam.s;
+  // red danger overlay outside zone
+  ctx.save();
+  const pulse=.12+Math.sin(performance.now()*.003)*.04;
+  ctx.fillStyle=`rgba(220,40,40,${pulse})`;
+  ctx.fillRect(0,0,W,H);
+  ctx.globalCompositeOperation='destination-out';
+  ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
+  ctx.globalCompositeOperation='source-over';
+  ctx.strokeStyle='#ff6f00'; ctx.lineWidth=4;
+  ctx.setLineDash([12,8]);
+  ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+function drawZones(){
+  if(curMode!=='dom')return;
+  for(const z of zones){
+    const[sx,sy]=toSC(z.x,z.y), r=z.r*cam.s;
+    ctx.save();
+    ctx.globalAlpha=.2+z.prog*.2;
+    ctx.fillStyle=z.color;
+    ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=.75;
+    ctx.strokeStyle=z.color; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.stroke();
+    if(z.prog>0&&z.prog<1){
+      ctx.globalAlpha=1; ctx.strokeStyle=z.inZ?.[0]?.color||'#fff'; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.arc(sx,sy,r*.8,-Math.PI/2,-Math.PI/2+z.prog*Math.PI*2); ctx.stroke();
+    }
+    if(z.owner){
+      ctx.globalAlpha=1; ctx.fillStyle='#fff'; ctx.font=`bold ${Math.max(11,r*.18)}px Segoe UI`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(z.owner.name,sx,sy);
+    }
+    ctx.restore();
+  }
+}
+
+function drawFood(){
+  for(const f of foods){
+    const[sx,sy]=toSC(f.x,f.y);
+    if(sx<-8||sy<-8||sx>W+8||sy>H+8)continue;
+    ctx.fillStyle=f.color;
+    ctx.beginPath(); ctx.arc(sx,sy,Math.max(2,f.r*cam.s),0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawEjected(){
+  for(const e of ejected){
+    const[sx,sy]=toSC(e.x,e.y);
+    ctx.fillStyle=e.color;
+    ctx.beginPath(); ctx.arc(sx,sy,mToR(e.mass)*cam.s,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawViruses(){
+  for(const v of viruses){
+    const[sx,sy]=toSC(v.x,v.y);
+    const r=mToR(v.mass)*cam.s;
+    if(sx<-r||sy<-r||sx>W+r||sy>H+r)continue;
+    ctx.fillStyle=v.color; ctx.strokeStyle='#1b5e20'; ctx.lineWidth=2.5;
+    ctx.beginPath();
+    const sp=18;
+    for(let i=0;i<sp*2;i++){
+      const ang=(i/(sp*2))*Math.PI*2;
+      const rr=i%2===0?r:r*.85;
+      const x=sx+Math.cos(ang)*rr, y=sy+Math.sin(ang)*rr;
+      if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+  }
+}
+
+function drawPlayers(){
+  const all=[];
+  for(const p of players) if(!p.dead) for(const c of p.pieces) all.push({p,c});
+  all.sort((a,b)=>a.c.mass-b.c.mass);
+
+  for(const{p,c}of all){
+    const[sx,sy]=toSC(c.x,c.y), r=mToR(c.mass)*cam.s;
+    if(sx<-r||sy<-r||sx>W+r||sy>H+r)continue;
+
+    // Merge glow when ready to merge
+    const mergeReady=c.mergeTimer===0&&p.pieces.length>1;
+    if(p===me||mergeReady){
+      ctx.save();
+      ctx.shadowColor=mergeReady?'rgba(255,255,255,.7)':p.color;
+      ctx.shadowBlur=mergeReady?10+Math.sin(performance.now()*.006)*5:16;
+    }
+
+    // Gradient fill
+    const gr=ctx.createRadialGradient(sx-r*.28,sy-r*.28,r*.06,sx,sy,r);
+    gr.addColorStop(0,lighten(p.color,55));
+    gr.addColorStop(.7,p.color);
+    gr.addColorStop(1,lighten(p.color,-30));
+    ctx.fillStyle=gr;
+    ctx.strokeStyle='rgba(0,0,0,.18)'; ctx.lineWidth=Math.max(2,r*.04);
+    ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+    if(p===me||mergeReady) ctx.restore();
+
+    if(r>13){
+      const fs=Math.max(11,r*.3);
+      if(cfg.showNames){
+        ctx.font=`900 ${fs}px 'Segoe UI',sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.strokeStyle='rgba(0,0,0,.75)'; ctx.lineWidth=3.5;
+        ctx.strokeText(p.name,sx,sy-r*.1);
+        ctx.fillStyle='#fff'; ctx.fillText(p.name,sx,sy-r*.1);
+      }
+      if(cfg.showMassOnBlob&&r>18){
+        ctx.font=`700 ${Math.max(9,r*.2)}px 'Segoe UI',sans-serif`;
+        ctx.strokeStyle='rgba(0,0,0,.65)'; ctx.lineWidth=2.5;
+        const ms=fmtMass(c.mass);
+        ctx.strokeText(ms,sx,sy+(cfg.showNames?r*.32:0));
+        ctx.fillStyle='rgba(255,255,255,.88)';
+        ctx.fillText(ms,sx,sy+(cfg.showNames?r*.32:0));
+      }
+    }
+  }
+}
+
+function drawParticles(){
+  if(!cfg.particles)return;
+  for(const pt of particles){
+    const[sx,sy]=toSC(pt.x,pt.y);
+    ctx.globalAlpha=pt.life/pt.maxLife;
+    ctx.fillStyle=pt.color;
+    ctx.beginPath(); ctx.arc(sx,sy,pt.r*cam.s,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawMinimap(){
+  const mm=document.getElementById('mm');
+  if(!cfg.minimap){mm.style.display='none';return;}
+  mm.style.display='block';
+  const S=118, W2=WW();
+  mctx.fillStyle='rgba(5,5,18,.85)'; mctx.fillRect(0,0,S,S);
+  if(curMode==='dom'){
+    for(const z of zones){
+      const mx=(z.x/W2)*S, my=(z.y/W2)*S;
+      mctx.fillStyle=z.color||'#555';
+      mctx.globalAlpha=.7+z.prog*.3;
+      mctx.beginPath(); mctx.arc(mx,my,5,0,Math.PI*2); mctx.fill();
+      mctx.globalAlpha=1;
+    }
+  }
+  if(safeZone){
+    const mx=(safeZone.x/W2)*S, my=(safeZone.y/W2)*S, mr=(safeZone.r/W2)*S;
+    mctx.strokeStyle='#ff6f00'; mctx.lineWidth=1.5;
+    mctx.beginPath(); mctx.arc(mx,my,mr,0,Math.PI*2); mctx.stroke();
+  }
+  for(const p of players){
+    if(p.dead)continue;
+    const c=pCenter(p);
+    const mx=(c.x/W2)*S, my=(c.y/W2)*S;
+    const mr=Math.min(6,Math.sqrt(pMass(p))*.12+2);
+    mctx.fillStyle=p===me?'#ffd740':p.color;
+    mctx.beginPath(); mctx.arc(mx,my,mr,0,Math.PI*2); mctx.fill();
+    if(p===me){mctx.strokeStyle='#fff';mctx.lineWidth=1;mctx.stroke();}
+  }
+  // Viewport rect
+  const vx=((cam.x-W/2/cam.s)/W2)*S;
+  const vy=((cam.y-H/2/cam.s)/W2)*S;
+  const vw=(W/cam.s/W2)*S, vh=(H/cam.s/W2)*S;
+  mctx.strokeStyle='rgba(255,255,255,.35)'; mctx.lineWidth=1;
+  mctx.strokeRect(vx,vy,vw,vh);
+}
+
+function render(){
+  ctx.fillStyle='#f5f5f5'; ctx.fillRect(0,0,W,H);
+  drawGrid();
+  if(curMode==='br') drawBR();
+  drawZones(); drawFood(); drawEjected(); drawViruses();
+  drawParticles(); drawPlayers();
+  drawMinimap();
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────
+function updateHUD(){
+  const ct=getCamTarget();
+  document.getElementById('mv').textContent=ct.leader?fmtMass(pMass(ct.leader)):'0';
+
+  const ranked=players.filter(p=>!p.dead)
+    .map(p=>({n:p.name,m:pMass(p),c:p.color,isMe:p===me}))
+    .sort((a,b)=>b.m-a.m).slice(0,10);
+  document.getElementById('lbc').innerHTML=ranked.map((r,i)=>`
+    <div class="lbr">
+      <span class="rk">${i+1}</span>
+      <span class="dot" style="background:${r.c}"></span>
+      <span class="nm${r.isMe?' me':''}">${r.n}</span>
+      <span class="ms">${fmtMass(r.m)}</span>
+    </div>`).join('');
+
+  const showTc=running&&!spectating&&me&&!me.dead&&(cfg.touchControls||isTouchDev());
+  document.getElementById('tc').style.display=showTc?'flex':'none';
+}
+
+// ── GAME STEP ─────────────────────────────────────────────────────────
+function step(dt){
+  const n=performance.now();
+  for(const p of players) if(p.isBot&&!p.dead) botUpdate(p,n);
+
+  if(!spectating&&me&&!me.dead){
+    const c=pCenter(me);
+    me.target.x=c.x+(mouse.x-W/2)/cam.s;
+    me.target.y=c.y+(mouse.y-H/2)/cam.s;
+  }
+
+  for(const p of players) if(!p.dead) movePlayer(p,dt);
+
+  for(let i=ejected.length-1;i>=0;i--){
+    const e=ejected[i];
+    e.x+=e.vx; e.y+=e.vy; e.vx*=.91; e.vy*=.91; e.age++; e.life--;
+    const W2=WW(); e.x=clamp(e.x,5,W2-5); e.y=clamp(e.y,5,W2-5);
+    if(e.life<=0){foods.push({x:e.x,y:e.y,r:5,color:e.color,mass:e.mass});ejected.splice(i,1);}
+  }
+
+  for(let i=particles.length-1;i>=0;i--){
+    const pt=particles[i];
+    pt.x+=pt.vx; pt.y+=pt.vy; pt.vx*=.91; pt.vy*=.91; pt.life--;
+    if(pt.life<=0) particles.splice(i,1);
+  }
+
+  eatFood(); virusHit(); eatPlayers(); applyDecay(dt);
+  if(curMode==='br') applyBR(dt);
+  if(curMode==='dom') updateDom(dt);
+  if(curMode==='chaos'){ chaosCooldown-=dt; if(chaosCooldown<=0){doChaos();chaosCooldown=rand(11000,22000);} }
+
+  // Track max mass
+  for(const p of players) if(!p.dead){ const m=pMass(p); if(m>p.maxMass)p.maxMass=m; }
+
+  // Replenish
+  const tvc=curMode==='virus'?cfg.virusCount*4:cfg.virusCount;
+  while(viruses.length<tvc) viruses.push(mkVirus());
+  while(foods.length<cfg.foodCount) foods.push(mkFood());
+
+  respawnBots();
+  if(me&&me.dead&&running){ showDeath(); }
+}
+
+function showDeath(){
+  running=false;
+  const rank=players.map(p=>({n:p.name,m:p.maxMass})).sort((a,b)=>b.m-a.m)
+    .findIndex(r=>r.n===me?.name)+1;
+  document.getElementById('dst').innerHTML=`
+    <b>Max. Masse:</b> ${fmtMass(me?.maxMass||0)}<br>
+    <b>Kills:</b> ${me?.kills||0}<br>
+    <b>Rang:</b> #${rank} von ${players.length}<br>
+    <b>Modus:</b> ${MODES.find(m=>m.id===curMode)?.name||curMode}`;
+  document.getElementById('ds').style.display='flex';
+}
+
+// ── MAIN LOOP ─────────────────────────────────────────────────────────
+let lastT=performance.now();
+function loop(t){
+  const dt=Math.min(33,t-lastT); lastT=t;
+  if(running){ step(dt); updCam(); render(); updateHUD(); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ── INPUT ─────────────────────────────────────────────────────────────
+function isTouchDev(){return navigator.maxTouchPoints>0||'ontouchstart'in window;}
+function doResize(){W=innerWidth;H=innerHeight;GC.width=W;GC.height=H;}
+addEventListener('resize',doResize); doResize();
+addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+GC.addEventListener('touchstart',e=>{
+  for(const t of e.changedTouches)if(moveTid===null){moveTid=t.identifier;mouse.x=t.clientX;mouse.y=t.clientY;}
+},{passive:true});
+GC.addEventListener('touchmove',e=>{
+  for(const t of e.changedTouches)if(t.identifier===moveTid){mouse.x=t.clientX;mouse.y=t.clientY;}
+},{passive:true});
+GC.addEventListener('touchend',e=>{
+  for(const t of e.changedTouches)if(t.identifier===moveTid)moveTid=null;
+},{passive:true});
+addEventListener('keydown',e=>{
+  if(!running||spectating||!me||me.dead)return;
+  if(e.code==='Space'){e.preventDefault();splitPlayer(me);}
+  else if(e.code==='KeyW'){e.preventDefault();ejectMass(me);}
+  else if(e.code==='KeyD'){e.preventDefault();multiSplit(me,2);}
+  else if(e.code==='KeyT'){e.preventDefault();multiSplit(me,3);}
+});
+function bindBtn(id,fn){
+  const el=document.getElementById(id);
+  el.addEventListener('touchstart',e=>{e.stopPropagation();if(running&&!spectating&&me&&!me.dead)fn();},{passive:false});
+  el.addEventListener('mousedown',()=>{if(running&&!spectating&&me&&!me.dead)fn();});
+}
+bindBtn('bSp',()=>splitPlayer(me));
+bindBtn('bTh',()=>ejectMass(me));
+bindBtn('bDb',()=>multiSplit(me,2));
+bindBtn('bTr',()=>multiSplit(me,3));
+
+// ── MODE GRID BUILD ───────────────────────────────────────────────────
+let selMode='ffa';
+const mgrid=document.getElementById('mgrid');
+MODES.forEach(m=>{
+  const c=document.createElement('div');
+  c.className='mc'+(m.id===selMode?' active':'');
+  c.dataset.id=m.id;
+  c.innerHTML=`<div class="mi">${m.icon}</div><div><div class="mn">${m.name}</div><div class="md">${m.desc}</div></div>`;
+  c.addEventListener('click',()=>{
+    document.querySelectorAll('.mc').forEach(x=>x.classList.remove('active'));
+    c.classList.add('active'); selMode=m.id;
+  });
+  mgrid.appendChild(c);
+});
+
+// ── UI EVENTS ─────────────────────────────────────────────────────────
+function startGame(isSpec){
+  curMode=selMode;
+  const name=(document.getElementById('nin').value.trim()||'Spieler');
+  initGame(name,isSpec);
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('ds').style.display='none';
+  document.getElementById('specBanner').style.display=isSpec?'flex':'none';
+  document.getElementById('settingsBtn').classList.add('vis');
+  // badge
+  const mi=MODES.find(m=>m.id===curMode);
+  const b=document.getElementById('badge');
+  b.textContent=mi?.name||curMode; b.className='badge '+(mi?.badge||'b-ffa');
+  running=true;
+}
+
+document.getElementById('playBtn').addEventListener('click',()=>startGame(false));
+document.getElementById('specBtn').addEventListener('click',()=>startGame(true));
+document.getElementById('stopSpec').addEventListener('click',()=>{
+  running=false;spectating=false;
+  document.getElementById('specBanner').style.display='none';
+  document.getElementById('overlay').style.display='flex';
+});
+document.getElementById('respBtn').addEventListener('click',()=>{
+  document.getElementById('ds').style.display='none'; startGame(false);
+});
+document.getElementById('menuBtn').addEventListener('click',()=>{
+  running=false;
+  document.getElementById('ds').style.display='none';
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('settingsBtn').classList.remove('vis');
+});
+document.getElementById('settingsBtn').addEventListener('click',()=>document.getElementById('sp').style.display='flex');
+document.getElementById('sCls').addEventListener('click',()=>document.getElementById('sp').style.display='none');
+document.getElementById('openSet').addEventListener('click',e=>{e.preventDefault();document.getElementById('sp').style.display='flex';});
+// close settings panel on outside click
+document.getElementById('sp').addEventListener('click',e=>{if(e.target===document.getElementById('sp'))document.getElementById('sp').style.display='none';});
+
+// ── SETTINGS BINDINGS ────────────────────────────────────────────────
+function bndR(id,key,fmt){
+  const el=document.getElementById(id),v=document.getElementById(id+'V');
+  el.value=cfg[key]; v.textContent=fmt?fmt(cfg[key]):cfg[key];
+  el.addEventListener('input',()=>{cfg[key]=Number(el.value);v.textContent=fmt?fmt(cfg[key]):cfg[key];});
+}
+function bndT(id,key){
+  const el=document.getElementById(id);
+  const upd=()=>el.classList.toggle('on',!!cfg[key]);
+  upd(); el.addEventListener('click',()=>{cfg[key]=!cfg[key];upd();});
+}
+bndR('sFc','foodCount');
+bndR('sVc','virusCount');
+bndR('sWs','worldSize',v=>(v/1000).toFixed(1)+'k');
+bndR('sMdr','massDecayRate');
+bndR('sMs','minSplitMass');
+bndR('sMp','maxPieces');
+bndR('sMt','mergeTime');
+bndR('sSm','speedMult',v=>'×'+(v/10).toFixed(1));
+bndR('sBc','botCount');
+bndR('sAg','botAggression');
+bndR('sIn','botIntelligence');
+bndT('sMdT','massDecay');
+bndT('sVsT','virusSplit');
+bndT('sPaT','particles');
+bndT('sGrT','grid');
+bndT('sNmT','showNames');
+bndT('sMbT','showMassOnBlob');
+bndT('sMMT','minimap');
+bndT('sTcT','touchControls');
+</script>
+</body>
+</html>
