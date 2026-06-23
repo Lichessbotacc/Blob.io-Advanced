@@ -2,9 +2,17 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no"/>
 <title>Blob.io — Offline Pro</title>
 <style>
+  html,body{
+  overflow:hidden;
+  touch-action:none;
+  overscroll-behavior:none;
+}
+canvas{
+  touch-action:none;
+}
 :root{
   --bg:#0b0b16;--bg2:#12122a;--panel:rgba(14,14,32,0.92);
   --border:rgba(130,100,255,0.22);--accent:#8b7cf8;--accent2:#00d9ff;
@@ -1291,6 +1299,9 @@ bndT('sNmT','showNames');
 bndT('sMbT','showMassOnBlob');
 bndT('sMMT','minimap');
 bndT('sTcT','touchControls');
+  document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+document.addEventListener('gesturestart',e=>e.preventDefault());
+document.addEventListener('gesturechange',e=>e.preventDefault());
 </script>
 </body>
 </html>
