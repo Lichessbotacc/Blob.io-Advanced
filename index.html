@@ -1261,8 +1261,16 @@ function startGame(isSpec){
   b.textContent=mi?.name||curMode; b.className='badge '+(mi?.badge||'b-ffa');
   running=true;
 }
-cfg.allowZoom = false;
-bndT('sZoomT','allowZoom');
+// 🚫 FULL ZOOM LOCK (iOS + Android + Desktop)
+document.addEventListener('gesturestart', e => e.preventDefault(), { passive:false });
+document.addEventListener('gesturechange', e => e.preventDefault(), { passive:false });
+document.addEventListener('gestureend', e => e.preventDefault(), { passive:false });
+
+document.addEventListener('touchmove', e => {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive:false });
+
+document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
 
 document.addEventListener('touchmove', e => {
   if (!allowZoom) e.preventDefault();
