@@ -13,8 +13,9 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
 html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);
-  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:#fff;touch-action:none}
-canvas{display:block;position:fixed;top:0;left:0;touch-action:none}
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:#fff;
+  touch-action:manipulation}
+canvas{display:block;position:fixed;top:0;left:0;touch-action:manipulation}
 
 /* GLASSMORPHISM */
 .glass{background:var(--panel);border:1px solid var(--border);
@@ -314,10 +315,20 @@ input.name-in:focus{border-color:var(--accent)}
 <script>
 // ════════════════════════════════════════════════════════════════════
 //  BLOB.IO — OFFLINE PRO  |  10 Game Modes | Smart Bots | Instant Merge
-//  Änderungen: Flache Blobs, Sofort-Merge bei Überlappung, Bot-KI ohne
-//  Cooldown, Masseverlust ab 150 mit Rate 0.002, 200k Neustart,
-//  langsamerer Split-Boost
 // ════════════════════════════════════════════════════════════════════
+
+// ── DOPPELKLICK-ZOOM DEAKTIVIEREN ────────────────────────────────────
+// Verhindert Zoom bei Doppelklick / Doppel-Tap auf allen Geräten
+document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+
+let lastTap = 0;
+document.addEventListener('touchstart', e => {
+  const now = Date.now();
+  if (now - lastTap < 350) {
+    e.preventDefault(); // Doppel-Tap verhindern
+  }
+  lastTap = now;
+}, { passive: false });
 
 const GC  = document.getElementById('gc');
 const ctx = GC.getContext('2d');
@@ -496,7 +507,9 @@ function movePlayer(p,dt){
     c.x=clamp(c.x,r,W2-r); c.y=clamp(c.y,r,W2-r);
   }
 
-  // Piece-to-piece collision / merge
+  // ── MERGE-LOGIK (aus Code 2 übernommen) ──────────────────────────
+  // Merge sobald sich zwei Teile berühren (d < ra + rb), kein 50%-Overlap nötig.
+  // Während mergeTimer > 0: Abstoßung statt Merge.
   for(let i=0;i<p.pieces.length;i++){
     for(let j=i+1;j<p.pieces.length;j++){
       const a=p.pieces[i], b=p.pieces[j];
@@ -506,8 +519,8 @@ function movePlayer(p,dt){
       const nx=dx/d, ny=dy/d;
 
       if(a.mergeTimer===0&&b.mergeTimer===0){
-        // SOFORT-MERGE: nur wenn die Blobs sich wirklich überlappen (>50%)
-        if(d<(ra+rb)*.5){
+        // Merge bei erster Berührung (d < ra + rb)
+        if(d<ra+rb){
           if(a.mass>=b.mass){
             a.mass+=b.mass;
             p.pieces.splice(j,1);
@@ -519,14 +532,9 @@ function movePlayer(p,dt){
             break;
           }
           continue;
-        } else if(d<ra+rb+90){
-          // Anziehung beim Annähern (sanfter Merge-Sog)
-          const str=Math.min(4,(ra+rb+90-d)*.05+.4);
-          a.x+=nx*str; a.y+=ny*str;
-          b.x-=nx*str; b.y-=ny*str;
         }
       } else {
-        // Abstoßung (Split-Phase)
+        // Abstoßung während Split-Phase (mergeTimer > 0)
         const ov=(ra+rb)-d;
         if(ov>0){
           const ms=a.mass+b.mass;
@@ -548,7 +556,6 @@ function splitPlayer(p){
     const half=c.mass/2; c.mass=half;
     const dx=p.target.x-c.x, dy=p.target.y-c.y;
     const d=Math.hypot(dx,dy)||1;
-    // LANGSAMERER Split-Boost (reduziert von 22 auf 14)
     const boost=14+mToR(half)*.2;
     c.mergeTimer=cfg.mergeTime;
     np.push(mkPiece(p,c.x,c.y,half,(dx/d)*boost,(dy/d)*boost,cfg.mergeTime));
@@ -574,7 +581,6 @@ function ejectMass(p){
 }
 
 // ── BOT AI ────────────────────────────────────────────────────────────
-// KEIN aiSplitCool — Bots splitten immer wenn es sinnvoll ist
 function botUpdate(b,now){
   if(now<b.aiNext)return;
   const intel=cfg.botIntelligence/10;
@@ -617,7 +623,6 @@ function botUpdate(b,now){
   }
 
   // ── PRIORITÄT 0.5: MERGE-REFLEX ─────────────────────────────
-  // Wenn aufgeteilt und alle Timer abgelaufen → Mitte ansteuern
   if(b.pieces.length>1&&b.pieces.every(pc=>pc.mergeTimer===0)){
     b.target.x=cen.x; b.target.y=cen.y; return;
   }
@@ -640,7 +645,6 @@ function botUpdate(b,now){
   if(bestPrey){
     b.target.x=bestPrey.x; b.target.y=bestPrey.y;
 
-    // SPLIT-ENTSCHEIDUNG: kein Cooldown, direkte Kaskadenprüfung
     if(b.pieces.length<cfg.maxPieces-2){
       const m2=big.mass/2, m4=big.mass/4, m8=big.mass/8;
       const ratio=1.20;
@@ -755,7 +759,6 @@ function eatPlayers(){
   }
 }
 
-// MASSEVERLUST: ab 150 Masse, Rate 0.002 × (dt/1000) — wie Referenz-Code
 function applyDecay(dt){
   if(!cfg.massDecay)return;
   for(const p of players){
@@ -771,7 +774,6 @@ function applyBR(dt){
   if(!safeZone)return;
   const elapsed=performance.now()-gameStart;
   if(elapsed>safeZone.shrinkDelay){
-    // Korrigierte Progression: linear vom initialen Radius zum Minimum
     const prog=Math.min(1,(elapsed-safeZone.shrinkDelay)/110000);
     safeZone.r = safeZoneInitR + (safeZone.minR - safeZoneInitR) * prog;
   }
@@ -850,7 +852,6 @@ function respawnBots(){
   }
 }
 
-// 200k MASSE → RUNDE NEU STARTEN
 function checkWinCondition(){
   if(winnerShown) return;
   for(const p of players){
@@ -861,7 +862,6 @@ function checkWinCondition(){
       document.getElementById('winnerBanner').style.display='block';
       setTimeout(()=>{
         document.getElementById('winnerBanner').style.display='none';
-        const name=me?me.name:'Spieler';
         startGame(spectating);
       },3500);
       return;
@@ -871,7 +871,7 @@ function checkWinCondition(){
 
 // ── PARTICLES ─────────────────────────────────────────────────────────
 function spawnP(x,y,color,count){
-  if(particles.length>500) return; // Speicherleck-Begrenzung
+  if(particles.length>500) return;
   for(let i=0;i<count;i++){
     const ang=Math.random()*Math.PI*2, spd=rand(1.5,5.5);
     particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
@@ -904,7 +904,6 @@ function toSC(x,y){return[(x-cam.x)*cam.s+W/2,(y-cam.y)*cam.s+H/2];}
 // ── RENDERING ─────────────────────────────────────────────────────────
 function drawGrid(){
   if(!cfg.grid)return;
-  // Gitterfarbe besser sichtbar auf hellem Hintergrund
   ctx.strokeStyle='rgba(0,0,0,0.07)'; ctx.lineWidth=1;
   const step=60;
   const sx=Math.floor((cam.x-W/2/cam.s)/step)*step, ex=cam.x+W/2/cam.s;
@@ -1002,7 +1001,6 @@ function drawViruses(){
   }
 }
 
-// BLOB-ZEICHNUNG: Flache Füllung + einfacher dunkler Umriss (wie Referenz)
 function drawPlayers(){
   const all=[];
   for(const p of players) if(!p.dead) for(const c of p.pieces) all.push({p,c});
@@ -1014,7 +1012,6 @@ function drawPlayers(){
     const r=mToR(c.mass)*cam.s;
     if(sx<-r||sy<-r||sx>W+r||sy>H+r)continue;
 
-    // Flache Füllung + einfacher Umriss (wie Referenz-Code)
     ctx.fillStyle=p.color;
     ctx.strokeStyle='rgba(0,0,0,.15)';
     ctx.lineWidth=3;
@@ -1149,10 +1146,8 @@ function step(dt){
   if(curMode==='dom') updateDom(dt);
   if(curMode==='chaos'){ chaosCooldown-=dt; if(chaosCooldown<=0){doChaos();chaosCooldown=rand(11000,22000);} }
 
-  // Max-Masse tracken
   for(const p of players) if(!p.dead){ const m=pMass(p); if(m>p.maxMass)p.maxMass=m; }
 
-  // Auffüllen (limitiert auf 100 pro Frame)
   const tvc=curMode==='virus'?cfg.virusCount*4:cfg.virusCount;
   while(viruses.length<tvc) viruses.push(mkVirus());
   let replenished=0;
