@@ -234,7 +234,10 @@ input.name-in:focus{border-color:var(--accent)}
   <div class="wt">🏆 <span id="winnerName"></span> gewinnt!</div>
   <div class="wd">200.000 Masse erreicht! Neue Runde startet...</div>
 </div>
-
+<div class="sr">
+  <label>Zoom/Scroll</label>
+  <div class="tog" id="sZoomT"><div class="tok"></div></div>
+</div>
 <div id="mm" class="glass"><canvas id="mmC" width="118" height="118"></canvas></div>
 
 <div id="tc">
@@ -1247,7 +1250,13 @@ function startGame(isSpec){
   b.textContent=mi?.name||curMode; b.className='badge '+(mi?.badge||'b-ffa');
   running=true;
 }
+let allowZoom = false;
 
+bndT('sZoomT','allowZoom');
+
+document.addEventListener('touchmove', e => {
+  if (!allowZoom) e.preventDefault();
+}, { passive:false });
 document.getElementById('playBtn').addEventListener('click',()=>startGame(false));
 document.getElementById('specBtn').addEventListener('click',()=>startGame(true));
 document.getElementById('stopSpec').addEventListener('click',()=>{
