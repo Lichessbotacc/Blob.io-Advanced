@@ -725,7 +725,17 @@ function botUpdate(b,now){
 
   const cen=pCenter(b), big=bigPiece(b), W2=WW();
   const myMass=pMass(b);
-  const freeSlots=cfg.maxPieces-b.pieces.length;
+const freeSlots=cfg.maxPieces-b.pieces.length;
+
+if(
+    b.pieces.length >= 3 &&
+    b.pieces.every(pc => pc.mergeTimer === 0)
+){
+    b.target.x = cen.x;
+    b.target.y = cen.y;
+    clampTgt(b.target);
+    return;
+}
 
   // ── MODE AWARENESS ──────────────────────────────────────────
 
