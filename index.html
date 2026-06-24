@@ -7,12 +7,11 @@
 <style>
 /* ---------- GLOBAL ---------- */
 html,body{
-overflow:hidden; /* verhindert Scrollen der gesamten Seite */
-touch-action:none; /* verhindert Zoom/Scroll auf Touch */
 margin:0;padding:0;box-sizing:border-box;
 background:var(--bg);
 font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
 color:#fff;
+width:100%;height:100%;
 }
 :root{
 --bg:#0b0b16;--bg2:#12122a;--panel:rgba(14,14,32,0.92);
@@ -21,15 +20,25 @@ color:#fff;
 --shadow:0 12px 48px rgba(0,0,0,.75);--r:12px;
 }
 
+/* ---------- GAME WRAPPER (nur dieser Bereich blockiert Scroll/Zoom) ---------- */
+#gameWrap{
+position:fixed;
+inset:0;
+overflow:hidden;
+touch-action:none; /* verhindert Scroll & Zoom NUR im Spielbereich */
+z-index:0;
+}
+
 /* ---------- CANVAS ---------- */
 canvas{
 display:block;
 position:fixed;
 top:0;left:0;
 width:100%;height:100%;
-pointer-events:all; /* Interaktionen bleiben erhalten */
-touch-action:none; /* verhindert Scroll & Zoom */
+pointer-events:all;
+touch-action:none;
 }
+#gc{z-index:1;background:#f5f5f5;}
 
 /* ---------- HUD ---------- */
 #hud{position:fixed;top:14px;left:14px;z-index:10;padding:10px 16px;
@@ -89,7 +98,7 @@ border:2px solid var(--yellow)}
 /* ---------- MINIMAP ---------- */
 #mm{position:fixed;bottom:14px;right:14px;z-index:10;overflow:hidden;
 padding-bottom:max(0px,env(safe-area-inset-bottom));border-radius:10px}
-#mmC{display:block}
+#mmC{display:block;position:static;width:118px;height:118px;touch-action:auto;pointer-events:none}
 
 /* ---------- TOUCH BUTTONS ---------- */
 #tc{position:fixed;bottom:0;left:0;z-index:15;display:none;gap:10px;padding:14px;
@@ -111,10 +120,12 @@ z-index:20;
 display:flex;
 align-items:flex-start;
 justify-content:center;
-overflow-y:auto; /* <‑‑ hier scrollbar für das Menü */
+overflow-y:auto; /* Menü ist scrollbar */
+-webkit-overflow-scrolling:touch;
+touch-action:auto; /* erlaubt Scroll/Zoom-Gesten im Menü */
 background:radial-gradient(ellipse at 40% 30%,#1a103a 0%,#080810 70%);
 }
-#overlay::before{content:'';position:fixed;inset:0;z-index:0;
+#overlay::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
 background:
 radial-gradient(circle at 20% 20%,rgba(139,124,248,.12) 0%,transparent 50%),
 radial-gradient(circle at 80% 70%,rgba(0,217,255,.1) 0%,transparent 50%),
@@ -128,7 +139,7 @@ animation:ambientMove 12s ease-in-out infinite alternate}
 display:flex;flex-direction:column;gap:14px;position:relative;z-index:1;
 padding-top:max(20px,env(safe-area-inset-top));
 padding-bottom:max(20px,env(safe-area-inset-bottom));
-max-height:100vh;overflow-y:auto;} /* <‑‑ scrollbar nur im Menü */
+touch-action:auto;}
 
 /* ---------- LOGO ---------- */
 .logo{text-align:center}
@@ -180,18 +191,22 @@ align-items:center;
 justify-content:center;
 background:rgba(0,0,0,.7);
 backdrop-filter:blur(5px);
+overflow-y:auto;
+touch-action:auto;
+-webkit-overflow-scrolling:touch;
 }
 .sbox{
 width:420px;
 max-width:95vw;
 max-height:88vh;
-overflow-y:auto; /* <‑‑ scrollbar nur im Settings‑Panel */
+overflow-y:auto;
+-webkit-overflow-scrolling:touch;
+touch-action:auto;
 background:#0e0e22;
 border:1px solid rgba(139,124,248,.25);
 border-radius:16px;padding:24px;
 box-shadow: var(--shadow);
-max-height:85vh;
-overflow-y:auto;
+margin:auto;
 }
 .sbox h2{font-size:19px;font-weight:900;text-align:center;margin-bottom:18px}
 .ssec{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);
@@ -199,10 +214,10 @@ overflow-y:auto;
 .sr{display:flex;align-items:center;gap:10px;margin:9px 0;font-size:13px}
 .sr label{flex:1;color:rgba(255,255,255,.8)}
 .sr input[type=range]{-webkit-appearance:none;appearance:none;width:120px;height:4px;
-  border-radius:2px;background:rgba(255,255,255,.15);outline:none;flex-shrink:0}
+  border-radius:2px;background:rgba(255,255,255,.15);outline:none;flex-shrink:0;touch-action:auto}
 .sr input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;
   border-radius:50%;background:var(--accent);cursor:pointer}
-.sr .v{width:44px;text-align:right;font-size:11px;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums}
+.sr .v{width:48px;text-align:right;font-size:11px;color:rgba(255,255,255,.5);font-variant-numeric:tabular-nums}
 .tog{position:relative;width:44px;height:24px;border-radius:12px;background:rgba(255,255,255,.15);
   cursor:pointer;transition:background .2s;flex-shrink:0}
 .tog.on{background:var(--accent)}
@@ -216,10 +231,11 @@ overflow-y:auto;
 
 /* ── DEATH SCREEN ─────────────────────────────── */
 #ds{position:fixed;inset:0;z-index:25;display:none;align-items:center;
-  justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(8px)}
+  justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);
+  overflow-y:auto;touch-action:auto}
 .dbox{text-align:center;padding:36px 44px;background:#100e20;
   border:1px solid rgba(255,71,87,.35);border-radius:18px;
-  box-shadow:0 0 80px rgba(255,71,87,.12);animation:popIn .25s ease}
+  box-shadow:0 0 80px rgba(255,71,87,.12);animation:popIn .25s ease;margin:auto}
 @keyframes popIn{from{opacity:0;transform:scale(.92)}to{opacity:1;transform:scale(1)}}
 .dbox h2{font-size:34px;font-weight:900;color:var(--red);margin-bottom:6px}
 .dstats{color:rgba(255,255,255,.55);font-size:14px;margin-bottom:22px;line-height:2.1}
@@ -234,43 +250,42 @@ overflow-y:auto;
 </style>
 </head>
 <body>
-<canvas id="gc"></canvas>
 
-<div id="hud" class="glass">
-  <div class="lbl">Masse</div>
-  <div class="mv" id="mv">0</div>
-  <div id="badge" class="badge b-ffa">FFA</div>
-</div>
-
-<div id="lb" class="glass"><h3>🏆 Bestenliste</h3><div id="lbc"></div></div>
-
-<div id="topCenter">
-  <button id="settingsBtn" title="Einstellungen">⚙️</button>
-  <div id="specBanner" class="glass">
-    <span>👁 <b id="specNm" style="color:var(--yellow)">—</b></span>
-    <button id="stopSpec">Mitspielen</button>
+<div id="gameWrap">
+  <canvas id="gc"></canvas>
+  <div id="hud" class="glass">
+    <div class="lbl">Masse</div>
+    <div class="mv" id="mv">0</div>
+    <div id="badge" class="badge b-ffa">FFA</div>
   </div>
-</div>
 
-<div id="zoneWarn">⚠ VERLASSE DIE ZONE!</div>
-<div id="evtBanner"><div class="et" id="evtT"></div><div class="ed" id="evtD"></div></div>
+  <div id="lb" class="glass"><h3>🏆 Bestenliste</h3><div id="lbc"></div></div>
 
-<!-- WINNER BANNER -->
-<div id="winnerBanner">
-  <div class="wt">🏆 <span id="winnerName"></span> gewinnt!</div>
-  <div class="wd">200.000 Masse erreicht! Neue Runde startet...</div>
-</div>
-<div class="sr">
-  <label>Zoom/Scroll</label>
-  <div class="tog" id="sZoomT"><div class="tok"></div></div>
-</div>
-<div id="mm" class="glass"><canvas id="mmC" width="118" height="118"></canvas></div>
+  <div id="topCenter">
+    <button id="settingsBtn" title="Einstellungen">⚙️</button>
+    <div id="specBanner" class="glass">
+      <span>👁 <b id="specNm" style="color:var(--yellow)">—</b></span>
+      <button id="stopSpec">Mitspielen</button>
+    </div>
+  </div>
 
-<div id="tc">
-  <button class="tsplit" id="bSp">Split</button>
-  <button class="tthrow" id="bTh">W</button>
-  <button class="tdbl" id="bDb">×2</button>
-  <button class="ttrp" id="bTr">×3</button>
+  <div id="zoneWarn">⚠ VERLASSE DIE ZONE!</div>
+  <div id="evtBanner"><div class="et" id="evtT"></div><div class="ed" id="evtD"></div></div>
+
+  <!-- WINNER BANNER -->
+  <div id="winnerBanner">
+    <div class="wt">🏆 <span id="winnerName"></span> gewinnt!</div>
+    <div class="wd">200.000 Masse erreicht! Neue Runde startet...</div>
+  </div>
+
+  <div id="mm" class="glass"><canvas id="mmC" width="118" height="118"></canvas></div>
+
+  <div id="tc">
+    <button class="tsplit" id="bSp">Split</button>
+    <button class="tthrow" id="bTh">W</button>
+    <button class="tdbl" id="bDb">×2</button>
+    <button class="ttrp" id="bTr">×3</button>
+  </div>
 </div>
 
 <!-- MAIN MENU -->
@@ -316,10 +331,17 @@ overflow-y:auto;
 <div id="sp">
   <div class="sbox">
     <h2>⚙ Einstellungen</h2>
+
     <div class="ssec">🌍 Welt</div>
     <div class="sr"><label>Futter-Menge</label><input type="range" id="sFc" min="100" max="2000" step="50"><span class="v" id="sFcV"></span></div>
     <div class="sr"><label>Virus-Anzahl</label><input type="range" id="sVc" min="5" max="80" step="1"><span class="v" id="sVcV"></span></div>
     <div class="sr"><label>Welt-Größe</label><input type="range" id="sWs" min="3000" max="10000" step="500"><span class="v" id="sWsV"></span></div>
+
+    <div class="ssec">🟢 Start & Wachstum</div>
+    <div class="sr"><label>Start-Masse</label><input type="range" id="sStM" min="5" max="500" step="5"><span class="v" id="sStMV"></span></div>
+    <div class="sr"><label>Start-Masse Bots</label><input type="range" id="sStB" min="5" max="500" step="5"><span class="v" id="sStBV"></span></div>
+    <div class="sr"><label>Futter-Massewert</label><input type="range" id="sFm" min="1" max="10" step="1"><span class="v" id="sFmV"></span></div>
+    <div class="sr"><label>Ziel-Masse (Sieg)</label><input type="range" id="sWin" min="2000" max="500000" step="1000"><span class="v" id="sWinV"></span></div>
 
     <div class="ssec">⚙ Mechanik</div>
     <div class="sr"><label>Masseverlust</label><div class="tog" id="sMdT"><div class="tok"></div></div></div>
@@ -327,8 +349,13 @@ overflow-y:auto;
     <div class="sr"><label>Min. Teilmasse</label><input type="range" id="sMs" min="30" max="150" step="5"><span class="v" id="sMsV"></span></div>
     <div class="sr"><label>Max. Teile/Spieler</label><input type="range" id="sMp" min="8" max="64" step="2"><span class="v" id="sMpV"></span></div>
     <div class="sr"><label>Merge-Zeit</label><input type="range" id="sMt" min="60" max="600" step="10"><span class="v" id="sMtV"></span></div>
+    <div class="sr"><label>Merge-Schwelle</label><input type="range" id="sMth" min="10" max="90" step="5"><span class="v" id="sMthV"></span></div>
+    <div class="sr"><label>Anziehungskraft</label><input type="range" id="sMag" min="0" max="10" step="1"><span class="v" id="sMagV"></span></div>
     <div class="sr"><label>Geschwindigkeit</label><input type="range" id="sSm" min="5" max="30" step="1"><span class="v" id="sSmV"></span></div>
+    <div class="sr"><label>Split-Wurfkraft</label><input type="range" id="sSpF" min="5" max="40" step="1"><span class="v" id="sSpFV"></span></div>
+    <div class="sr"><label>Auswurf-Masse</label><input type="range" id="sEjM" min="5" max="50" step="1"><span class="v" id="sEjMV"></span></div>
     <div class="sr"><label>Viren teilen Spieler</label><div class="tog" id="sVsT"><div class="tok"></div></div></div>
+    <div class="sr"><label>Virus-Mindestmasse</label><input type="range" id="sVm" min="50" max="300" step="10"><span class="v" id="sVmV"></span></div>
 
     <div class="ssec">🤖 Bots</div>
     <div class="sr"><label>Anzahl Bots</label><input type="range" id="sBc" min="0" max="100" step="1"><span class="v" id="sBcV"></span></div>
@@ -351,21 +378,29 @@ overflow-y:auto;
 
 <script>
 // ════════════════════════════════════════════════════════════════════
-//  BLOB.IO — OFFLINE PRO  |  10 Game Modes | Smart Bots | Instant Merge
+//  BLOB.IO — OFFLINE PRO  |  10 Game Modes | Smart Bots | Agar.io-Merge
 // ════════════════════════════════════════════════════════════════════
 
-// ── DOPPELKLICK-ZOOM DEAKTIVIEREN ────────────────────────────────────
-// Verhindert Zoom bei Doppelklick / Doppel-Tap auf allen Geräten
-document.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
+// ── DOPPELKLICK-ZOOM DEAKTIVIEREN (nur im Spielbereich) ──────────────
+const gameWrap = document.getElementById('gameWrap');
+gameWrap.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
 
 let lastTap = 0;
-document.addEventListener('touchstart', e => {
+gameWrap.addEventListener('touchstart', e => {
   const now = Date.now();
   if (now - lastTap < 350) {
-    e.preventDefault(); // Doppel-Tap verhindern
+    e.preventDefault(); // Doppel-Tap verhindern, aber nur im Spielbereich
   }
   lastTap = now;
 }, { passive: false });
+
+// Pinch-Zoom / Mehrfingergesten nur im Spielbereich blockieren
+gameWrap.addEventListener('touchmove', e => {
+  if (e.touches.length > 1) e.preventDefault();
+}, { passive: false });
+gameWrap.addEventListener('gesturestart', e => e.preventDefault(), { passive:false });
+gameWrap.addEventListener('gesturechange', e => e.preventDefault(), { passive:false });
+gameWrap.addEventListener('gestureend', e => e.preventDefault(), { passive:false });
 
 const GC  = document.getElementById('gc');
 const ctx = GC.getContext('2d');
@@ -407,9 +442,11 @@ const MODES = [
 // ── SETTINGS ─────────────────────────────────────────────────────────
 const DEF = {
   foodCount:1500, virusCount:20, worldSize:5000,
+  startMass:50, startMassBot:60, foodMassVal:1, winMass:200000,
   massDecay:true, massDecayRate:3, minSplitMass:36,
-  maxPieces:32, mergeTime:220, speedMult:10,
-  virusSplit:true, botCount:20, botAggression:7, botIntelligence:7,
+  maxPieces:32, mergeTime:220, mergeThreshold:35, mergeMagnet:5,
+  speedMult:10, splitForce:14, ejectMass:12,
+  virusSplit:true, virusMinMass:130, botCount:20, botAggression:7, botIntelligence:7,
   particles:true, grid:true, showNames:true, showMassOnBlob:true,
   minimap:true, touchControls:false,
 };
@@ -446,15 +483,16 @@ function speedFor(m){
 }
 function decayMult(){ return curMode==='rush'?2.5:curMode==='giant'?1.2:1; }
 function initMass(isBot){
+  const base = isBot?cfg.startMassBot:cfg.startMass;
   if(isBot){
-    if(curMode==='giant') return rand(900,2000);
+    if(curMode==='giant') return rand(base*15,base*33);
     if(curMode==='nano')  return rand(2,10);
-    return rand(10,120);
+    return rand(base*.17,base*2);
   }
-  if(curMode==='giant') return rand(1000,1500);
+  if(curMode==='giant') return rand(base*16.7,base*25);
   if(curMode==='nano')  return rand(3,8);
-  if(curMode==='rush')  return rand(20,50);
-  return 50;
+  if(curMode==='rush')  return rand(base*.4,base);
+  return base;
 }
 function fmtMass(m){ return m>=1000?(m/1000).toFixed(1)+'k':Math.floor(m).toString(); }
 function pMass(p){ return p.pieces.reduce((s,c)=>s+c.mass,0); }
@@ -468,7 +506,7 @@ function bigPiece(p){ return p.pieces.reduce((a,b)=>b.mass>a.mass?b:a,p.pieces[0
 // ── ENTITY FACTORIES ─────────────────────────────────────────────────
 function mkFood(){
   const W2=WW();
-  return{x:rand(15,W2-15),y:rand(15,W2-15),r:5,color:COLORS[ri(COLORS.length)],mass:1};
+  return{x:rand(15,W2-15),y:rand(15,W2-15),r:5,color:COLORS[ri(COLORS.length)],mass:cfg.foodMassVal};
 }
 function mkVirus(){
   const W2=WW();
@@ -544,9 +582,12 @@ function movePlayer(p,dt){
     c.x=clamp(c.x,r,W2-r); c.y=clamp(c.y,r,W2-r);
   }
 
-  // ── MERGE-LOGIK (aus Code 2 übernommen) ──────────────────────────
-  // Merge sobald sich zwei Teile berühren (d < ra + rb), kein 50%-Overlap nötig.
-  // Während mergeTimer > 0: Abstoßung statt Merge.
+  // ── MERGE-LOGIK (Agar.io-Stil) ───────────────────────────────────
+  // Solange der Merge-Timer läuft: Teile dürfen sich frei überlappen/
+  // durchdringen (keine Abstoßung) und werden sanft zueinander gezogen,
+  // genau wie in agar.io. Erst wenn sie WIRKLICH stark überlappen
+  // (Abstand < mergeThreshold% des kombinierten Radius) UND beide
+  // Merge-Timer abgelaufen sind, verschmelzen sie tatsächlich.
   for(let i=0;i<p.pieces.length;i++){
     for(let j=i+1;j<p.pieces.length;j++){
       const a=p.pieces[i], b=p.pieces[j];
@@ -554,25 +595,41 @@ function movePlayer(p,dt){
       const dx=b.x-a.x, dy=b.y-a.y;
       const d=Math.hypot(dx,dy)||.001;
       const nx=dx/d, ny=dy/d;
+      const sumR=ra+rb;
 
-      if(a.mergeTimer===0&&b.mergeTimer===0){
-        // Merge bei erster Berührung (d < ra + rb)
-        if(d<ra+rb){
-          if(a.mass>=b.mass){
-            a.mass+=b.mass;
-            p.pieces.splice(j,1);
-            j--;
-          } else {
-            b.mass+=a.mass;
-            p.pieces.splice(i,1);
-            i--;
-            break;
-          }
-          continue;
+      const bothReady = a.mergeTimer===0&&b.mergeTimer===0;
+      // Schwelle: bei 0% verschmelzen sie erst wenn die Mittelpunkte
+      // fast deckungsgleich sind; bei 90% schon bei leichter Überlappung.
+      const mergeDist = sumR*(1-cfg.mergeThreshold/100)*0.5;
+
+      if(bothReady && d<Math.max(mergeDist, Math.min(ra,rb)*0.35)){
+        // Tatsächlicher Merge
+        if(a.mass>=b.mass){
+          a.mass+=b.mass;
+          p.pieces.splice(j,1);
+          j--;
+        } else {
+          b.mass+=a.mass;
+          p.pieces.splice(i,1);
+          i--;
+          break;
         }
+        continue;
+      }
+
+      if(bothReady){
+        // Bereit zum Verschmelzen, aber noch nicht nah genug:
+        // sanft zueinander ziehen statt abstoßen (agar.io-Feeling)
+        if(cfg.mergeMagnet>0 && d>mergeDist){
+          const pull = cfg.mergeMagnet*0.025;
+          a.x+=nx*pull; a.y+=ny*pull;
+          b.x-=nx*pull; b.y-=ny*pull;
+        }
+        // keine Kollisionsauflösung -> sie dürfen sich überlappen
       } else {
-        // Abstoßung während Split-Phase (mergeTimer > 0)
-        const ov=(ra+rb)-d;
+        // Split-Phase (mergeTimer > 0): normale Abstoßung, damit
+        // frisch gesplittete Teile sich auseinanderschieben
+        const ov=sumR-d;
         if(ov>0){
           const ms=a.mass+b.mass;
           const pA=ov*(b.mass/ms)*.6, pB=ov*(a.mass/ms)*.6;
@@ -593,7 +650,7 @@ function splitPlayer(p){
     const half=c.mass/2; c.mass=half;
     const dx=p.target.x-c.x, dy=p.target.y-c.y;
     const d=Math.hypot(dx,dy)||1;
-    const boost=14+mToR(half)*.2;
+    const boost=cfg.splitForce+mToR(half)*.2;
     c.mergeTimer=cfg.mergeTime;
     np.push(mkPiece(p,c.x,c.y,half,(dx/d)*boost,(dy/d)*boost,cfg.mergeTime));
     split=true;
@@ -606,7 +663,7 @@ function multiSplit(p,times){
   run();
 }
 function ejectMass(p){
-  const EJ=12;
+  const EJ=cfg.ejectMass;
   for(const c of p.pieces){
     if(c.mass<EJ+20) continue;
     c.mass-=EJ;
@@ -748,7 +805,7 @@ function virusHit(){
     if(p.dead)continue;
     for(let pi=0;pi<p.pieces.length;pi++){
       const c=p.pieces[pi];
-      if(c.mass<130)continue;
+      if(c.mass<cfg.virusMinMass)continue;
       const r=mToR(c.mass);
       for(let vi=viruses.length-1;vi>=0;vi--){
         const v=viruses[vi];
@@ -802,7 +859,7 @@ function applyDecay(dt){
     if(p.dead)continue;
     for(const c of p.pieces){
       if(curMode==='nano'&&c.mass<25)continue;
-      if(c.mass>150) c.mass -= c.mass * 0.002 * (dt/1000) * decayMult();
+      if(c.mass>150) c.mass -= c.mass * 0.002 * (cfg.massDecayRate/3) * (dt/1000) * decayMult();
     }
   }
 }
@@ -893,9 +950,10 @@ function checkWinCondition(){
   if(winnerShown) return;
   for(const p of players){
     if(p.dead) continue;
-    if(pMass(p)>=200000){
+    if(pMass(p)>=cfg.winMass){
       winnerShown=true;
       document.getElementById('winnerName').textContent=p.name;
+      document.querySelector('#winnerBanner .wd').textContent=fmtMass(cfg.winMass)+' Masse erreicht! Neue Runde startet...';
       document.getElementById('winnerBanner').style.display='block';
       setTimeout(()=>{
         document.getElementById('winnerBanner').style.display='none';
@@ -1276,17 +1334,6 @@ function startGame(isSpec){
   b.textContent=mi?.name||curMode; b.className='badge '+(mi?.badge||'b-ffa');
   running=true;
 }
-// 🚫 FULL ZOOM LOCK (iOS + Android + Desktop)
-document.addEventListener('gesturestart', e => e.preventDefault(), { passive:false });
-document.addEventListener('gesturechange', e => e.preventDefault(), { passive:false });
-document.addEventListener('gestureend', e => e.preventDefault(), { passive:false });
-
-document.addEventListener('touchmove', e => {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive:false });
-
-document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
-
 
 document.getElementById('playBtn').addEventListener('click',()=>startGame(false));
 document.getElementById('specBtn').addEventListener('click',()=>startGame(true));
@@ -1323,11 +1370,20 @@ function bndT(id,key){
 bndR('sFc','foodCount');
 bndR('sVc','virusCount');
 bndR('sWs','worldSize',v=>(v/1000).toFixed(1)+'k');
+bndR('sStM','startMass');
+bndR('sStB','startMassBot');
+bndR('sFm','foodMassVal');
+bndR('sWin','winMass',v=>(v/1000).toFixed(0)+'k');
 bndR('sMdr','massDecayRate');
 bndR('sMs','minSplitMass');
 bndR('sMp','maxPieces');
 bndR('sMt','mergeTime');
+bndR('sMth','mergeThreshold',v=>v+'%');
+bndR('sMag','mergeMagnet');
 bndR('sSm','speedMult',v=>'×'+(v/10).toFixed(1));
+bndR('sSpF','splitForce');
+bndR('sEjM','ejectMass');
+bndR('sVm','virusMinMass');
 bndR('sBc','botCount');
 bndR('sAg','botAggression');
 bndR('sIn','botIntelligence');
