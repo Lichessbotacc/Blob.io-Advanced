@@ -1287,9 +1287,7 @@ document.addEventListener('touchmove', e => {
 
 document.addEventListener('dblclick', e => e.preventDefault(), { passive:false });
 
-document.addEventListener('touchmove', e => {
-  if (!allowZoom) e.preventDefault();
-}, { passive:false });
+
 document.getElementById('playBtn').addEventListener('click',()=>startGame(false));
 document.getElementById('specBtn').addEventListener('click',()=>startGame(true));
 document.getElementById('stopSpec').addEventListener('click',()=>{
