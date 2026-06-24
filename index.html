@@ -925,9 +925,27 @@ function botUpdate(b,now){
   }
 
   // ── MERGE SELF when safe ─────────────────────────────────────
-  if(b.pieces.length>1&&b.pieces.every(pc=>pc.mergeTimer===0)&&!biggestThreat){
-    b.target.x=cen.x; b.target.y=cen.y; // move cursor to center = merge tendency
-  }
+  if(
+    b.pieces.length > 1 &&
+    b.pieces.every(pc => pc.mergeTimer === 0) &&
+    !biggestThreat
+){
+    let minX=Infinity,minY=Infinity;
+    let maxX=-Infinity,maxY=-Infinity;
+
+    for(const p of b.pieces){
+        minX=Math.min(minX,p.x);
+        minY=Math.min(minY,p.y);
+        maxX=Math.max(maxX,p.x);
+        maxY=Math.max(maxY,p.y);
+    }
+
+    b.target.x=(minX+maxX)/2;
+    b.target.y=(minY+maxY)/2;
+
+    clampTgt(b.target);
+    return;
+}
 
   // ── MINE AVOIDANCE ───────────────────────────────────────────
   if(curMode==='mine'&&mines.length>0){
