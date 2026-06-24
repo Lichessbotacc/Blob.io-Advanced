@@ -10,37 +10,38 @@ html,body{margin:0;padding:0;box-sizing:border-box;background:var(--bg);
 :root{--bg:#0b0b16;--panel:rgba(10,10,26,0.93);--border:rgba(130,100,255,0.28);
   --accent:#8b7cf8;--accent2:#00d9ff;--green:#00e676;--red:#ff4757;--yellow:#ffd740;
   --orange:#ff9f43;--shadow:0 12px 48px rgba(0,0,0,.75);--r:12px;}
+
 #gameWrap{position:fixed;inset:0;overflow:hidden;touch-action:none;z-index:0;}
 canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:all;touch-action:none;}
 #gc{z-index:1;background:#f0f0f0;}
 
-/* ── HUD ── */
+/* ── HUD (unten rechts) ── */
 #hud{
 position:fixed;
 bottom:14px;
 right:14px;
-top:auto;
-left:auto;
-  padding-top:max(10px,env(safe-area-inset-top));
-  background:rgba(8,8,24,0.90);border:1.5px solid var(--border);
-  border-radius:13px;backdrop-filter:blur(14px);min-width:120px;}
+z-index:11;
+  padding:12px 18px;
+  background:rgba(8,8,24,0.93);border:1.5px solid var(--border);
+  border-radius:14px;backdrop-filter:blur(14px);min-width:135px;
+  box-shadow:0 6px 28px rgba(0,0,0,.5);}
 #hud .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);font-weight:600}
 #hud .mv{font-size:26px;font-weight:900;color:var(--accent2);line-height:1.1;font-variant-numeric:tabular-nums}
 #hud .badge{display:inline-block;margin-top:5px;padding:2px 10px;border-radius:20px;
   font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
 #hudExtra{font-size:12px;color:var(--yellow);margin-top:4px;font-weight:700;display:none}
 
-/* ── LEADERBOARD (left, big, visible) ── */
+/* ── LEADERBOARD (oben rechts) ── */
 #lb{
 position:fixed;
 top:14px;
 right:14px;
-left:auto;
-z-index:10;
-  min-width:200px;max-width:230px;
+z-index:11;
+  min-width:200px;max-width:235px;
   background:rgba(6,6,20,0.95);border:2px solid rgba(139,124,248,0.4);
   border-radius:13px;backdrop-filter:blur(16px);
-  box-shadow:0 6px 32px rgba(0,0,0,.6),0 0 0 1px rgba(139,124,248,.08) inset;}
+  box-shadow:0 6px 32px rgba(0,0,0,.55);
+  padding:14px 16px;}
 #lb h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
   color:var(--yellow);margin:0 0 10px 0;display:flex;align-items:center;gap:6px}
 .lbr{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:13px}
@@ -98,17 +99,27 @@ z-index:10;
 #winnerBanner .wt{font-size:44px;font-weight:900;color:var(--yellow)}
 #winnerBanner .wd{font-size:15px;color:rgba(255,255,255,.7);margin-top:8px}
 
-/* ── BOTTOM-LEFT: minimap + touch buttons ── */
-#bottomLeft{
-position:fixed;
-inset:0;
-pointer-events:none;}
-#bottomLeft>*{pointer-events:all;}
-#mm{position:fixed;top:14px;left:14px;border-radius:10px;overflow:hidden;border:1.5px solid rgba(139,124,248,.22);}
+/* ── MINIMAP (oben links) ── */
+#mm{
+position:fixed !important;
+top:14px;
+left:14px;
+z-index:10;
+  border-radius:12px;
+  overflow:hidden;
+  border:1.5px solid rgba(139,124,248,.25);
+  box-shadow:0 4px 20px rgba(0,0,0,.4);}
 #mmC{display:block;width:108px;height:108px;touch-action:auto;pointer-events:none}
 
-/* ── TOUCH BUTTONS ── */
-#tc{position:fixed;bottom:14px;left:14px;display:none;align-items:flex-end;}
+/* ── TOUCH CONTROLS (unten links) ── */
+#tc{
+position:fixed !important;
+bottom:14px;
+left:14px;
+z-index:10;
+  display:none;
+  align-items:flex-end;
+  pointer-events:all;}
 .tcGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;}
 #tc button{border-radius:14px;border:2.5px solid rgba(255,255,255,.55);
   background:rgba(255,255,255,.2);backdrop-filter:blur(4px);color:#fff;
@@ -152,7 +163,7 @@ input.name-in{width:100%;padding:11px 14px;font-size:16px;font-weight:700;
 input.name-in:focus{border-color:var(--accent)}
 .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mc{padding:10px 12px;border-radius:10px;cursor:pointer;
-  background:rgba(255,255,255,.03);border.1.5px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.07);
   transition:all .15s;display:flex;align-items:center;gap:9px;user-select:none}
 .mc:hover{background:rgba(139,124,248,.12);border-color:var(--accent)}
 .mc.active{background:rgba(139,124,248,.22);border-color:var(--accent);
@@ -218,6 +229,11 @@ input.name-in:focus{border-color:var(--accent)}
 .b-koth{background:#c6a700}.b-chaos{background:#c62828}
 .b-infect{background:#2e7d32}.b-reverse{background:#0277bd}
 .b-jugger{background:#bf360c}.b-gold{background:#e65100}.b-mine{background:#4a148c}
+
+/* Responsive */
+@media (max-width: 768px) {
+    #mm { width: 96px !important; height: 96px !important; }
+}
 </style>
 </head>
 <body>
