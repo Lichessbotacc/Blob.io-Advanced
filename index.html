@@ -692,12 +692,7 @@ function splitPlayer(p){
     const half=c.mass/2; c.mass=half;
     const dx=p.target.x-c.x, dy=p.target.y-c.y;
     const d=Math.hypot(dx,dy)||1;
-    // Große Massen fliegen beim Split realistischerweise NICHT weiter als kleine —
-    // im echten agar.io-Feeling skaliert der Wurfimpuls eher invers mit der Größe,
-    // weil größere Kugeln träger sind. Wir dämpfen den Boost daher mit der Masse
-    // und kappen ihn hart, statt ihn mit mToR(half) ansteigen zu lassen.
-    const massDamp = Math.pow(100/Math.max(100,half), 0.32); // >100 Masse -> Boost sinkt
-    const boost = clamp(cfg.splitForce*massDamp, cfg.splitForce*0.35, cfg.splitForce*1.15);
+    const boost=cfg.splitForce+mToR(half)*.2;
     c.mergeTimer=cfg.mergeTime;
     np.push(mkPiece(p,c.x,c.y,half,(dx/d)*boost,(dy/d)*boost,cfg.mergeTime));
     split=true;
@@ -730,17 +725,7 @@ function botUpdate(b,now){
 
   const cen=pCenter(b), big=bigPiece(b), W2=WW();
   const myMass=pMass(b);
-const freeSlots=cfg.maxPieces-b.pieces.length;
-
-if(
-    b.pieces.length >= 3 &&
-    b.pieces.every(pc => pc.mergeTimer === 0)
-){
-    b.target.x = cen.x;
-    b.target.y = cen.y;
-    clampTgt(b.target);
-    return;
-}
+  const freeSlots=cfg.maxPieces-b.pieces.length;
 
   // ── MODE AWARENESS ──────────────────────────────────────────
 
@@ -795,101 +780,13 @@ if(
     }
   }
 
-  // ── DUO: kompakt bleiben + koordiniertes Splitrun/Tricksplit ──
+  // Duo mode: stay near duo mate
   if(curMode==='duo'&&b.duoMate&&!b.duoMate.dead){
-    const mate=b.duoMate;
-    const mateCen=pCenter(mate);
+    const mateCen=pCenter(b.duoMate);
     const dMate=dist(cen.x,cen.y,mateCen.x,mateCen.y);
-    const myMassD=myMass, mateMass=pMass(mate);
-
-    // Gemeinsamen, nächsten Gegner in der Nähe beider Partner suchen (Ziel für
-    // koordiniertes Splitrun/Tricksplit). Nur Gegner, die für das DUO als Team
-    // relevant sind (nicht riesig größer als beide zusammen).
-    let duoTarget=null, duoTargetDist=Infinity, duoTargetPiece=null;
-    for(const p of players){
-      if(p===b||p===mate||p.dead)continue;
-      if(p.teamId===b.teamId&&b.teamId>=0)continue;
-      const pc=pCenter(p);
-      const dToMe=dist(cen.x,cen.y,pc.x,pc.y);
-      const dToMate=dist(mateCen.x,mateCen.y,pc.x,pc.y);
-      const combinedMass=myMassD+mateMass;
-      // Nur interessant wenn Gegner nicht massiv größer als unser Duo zusammen ist
-      // und in vernünftiger Reichweite von mindestens einem Partner.
-      if((dToMe<700||dToMate<700)&&pMass(p)<combinedMass*1.4){
-        const score=dToMe;
-        if(score<duoTargetDist){
-          duoTargetDist=score; duoTarget=p; duoTargetPiece=bigPiece(p);
-        }
-      }
-    }
-
-    if(duoTarget&&intel>0.25){
-      const tc=pCenter(duoTarget);
-      const iAmBigger=myMassD>=mateMass;
-      const weCanWin = (myMassD+mateMass) > pMass(duoTarget)*1.15;
-
-      if(weCanWin){
-        if(iAmBigger){
-          // ── TRICKSPLIT (Jäger-Rolle) ──────────────────────────
-          // Statt direkt auf den Gegner zu zielen, zielt der größere Partner leicht
-          // VERSETZT am Gegner vorbei (Einkreisungswinkel), um die Fluchtroute
-          // abzuschneiden, während der kleinere Partner von der anderen Seite kommt.
-          const dx=tc.x-cen.x, dy=tc.y-cen.y;
-          const baseAng=Math.atan2(dy,dx);
-          // Encirclement-Winkel: leicht seitlich versetzt, Richtung in die der
-          // Gegner vermutlich fliehen wird (weg von uns) abschneiden.
-          const sideAng=baseAng+ (mate ? (b.name.length%2===0?1:-1) : 1)*0.55;
-          const offsetDist=mToR(pMass(duoTarget))*1.4+60;
-          b.target.x=tc.x+Math.cos(sideAng)*offsetDist*0.4;
-          b.target.y=tc.y+Math.sin(sideAng)*offsetDist*0.4;
-          clampTgt(b.target);
-          // Wenn nah genug und groß genug: gezielter Tricksplit-Schuss, der das
-          // Opfer von der Seite trifft statt frontal.
-          const distToTarget=dist(cen.x,cen.y,tc.x,tc.y);
-          if(distToTarget<mToR(myMassD)*3&&myMassD>cfg.minSplitMass*2.2&&freeSlots>=1){
-            const halfMass=myMassD/2;
-            if(halfMass>pMass(duoTarget)*1.15){
-              b.target.x=tc.x; b.target.y=tc.y; // kurz vor dem Schuss exakt aufs Opfer zielen
-              splitPlayer(b);
-            }
-          }
-          return;
-        } else {
-          // ── SPLITRUN (Feeder-Rolle) ────────────────────────────
-          // Kleinerer Partner lenkt den Gegner ab/umkreist ihn UND schiebt eigene
-          // Masse per Split Richtung des größeren Partners, damit dieser schnell
-          // groß genug wird, um das Opfer zu fressen — klassisches Team-Splitrun.
-          const distToTarget=dist(cen.x,cen.y,tc.x,tc.y);
-          const safeFromTarget = duoTargetPiece ? duoTargetPiece.mass<myMassD*1.1 : true;
-          if(safeFromTarget){
-            // Gegner umkreisen statt stur draufhalten (Ablenkung)
-            const orbitAng=performance.now()*0.0012+ (b.name.charCodeAt(0)%6);
-            const orbitR=mToR(pMass(duoTarget))*1.8+90;
-            b.target.x=tc.x+Math.cos(orbitAng)*orbitR;
-            b.target.y=tc.y+Math.sin(orbitAng)*orbitR;
-            clampTgt(b.target);
-          } else {
-            // Zu gefährlich nah am Opfer -> zurück Richtung Partner ausweichen
-            b.target.x=mateCen.x; b.target.y=mateCen.y; clampTgt(b.target);
-          }
-          // Masse Richtung Partner splitten (Splitrun-Pass), wenn Partner nicht zu
-          // weit weg ist und genug Masse zum Abgeben da ist.
-          if(dMate<mToR(myMassD)*5+260&&myMassD>cfg.minSplitMass*2.4&&freeSlots>=1&&intel>0.4){
-            const oldTx=b.target.x, oldTy=b.target.y;
-            b.target.x=mateCen.x; b.target.y=mateCen.y;
-            splitPlayer(b);
-            b.target.x=oldTx; b.target.y=oldTy;
-          }
-          return;
-        }
-      }
-    }
-
-    // Kein gemeinsames Jagdziel: einfach kompakt beim Partner bleiben.
-    // Schwellenwert niedriger und Zielpunkt näher am Partner für ein "schön
-    // kompaktes" Duo statt loser Kopplung.
-    if(dMate>220){
-      b.target.x=mateCen.x+rand(-35,35); b.target.y=mateCen.y+rand(-35,35);
+    if(dMate>350){
+      // Move toward mate if too far
+      b.target.x=mateCen.x+rand(-60,60); b.target.y=mateCen.y+rand(-60,60);
       clampTgt(b.target); return;
     }
   }
@@ -931,28 +828,53 @@ if(
       if(fx>W2-150) fx-=200; if(fy>W2-150) fy-=200;
       b.target.x=fx; b.target.y=fy; clampTgt(b.target);
 
-      // Split-escape: ein großer, naher Gegner soll zuverlässig dazu führen, dass der
-      // Bot mit mehreren Splits WEG vom Bedroher fliegt (klassisches "Splitrun weg").
-      // Je näher und bedrohlicher, desto mehr Splits in einem Zug.
-      const threatR=mToR(biggestThreat.mass);
-      const veryClose=threatDist<threatR*2.6;
-      const extremelyClose=threatDist<threatR*1.5;
-      if(myMass>cfg.minSplitMass*2.2&&freeSlots>=1&&veryClose){
+      // Split-escape: if threat is very close and we're big enough, split away
+      if(intel>0.4&&threatDist<mToR(biggestThreat.mass)*2.2&&myMass>cfg.minSplitMass*2.5&&freeSlots>=2){
+        // Only split-escape if the split pieces won't be eaten
         const splitMass=myMass/2;
-        const halfWouldSurvive=!(splitMass*1.15<biggestThreat.mass);
-        if(halfWouldSurvive){
-          // Ziel kurz hinter den aktuellen Fluchtpunkt legen, damit der Split-Impuls
-          // tatsächlich weiter weg vom Bedroher trägt statt seitlich.
-          b.target.x=fx; b.target.y=fy;
-          if(extremelyClose&&freeSlots>=2&&intel>0.3) multiSplit(b,2);
-          else splitPlayer(b);
+        if(splitMass*1.3<biggestThreat.mass||splitMass>biggestThreat.mass*1.3){
+          // Don't split if the half would still be eaten and we're small
+        } else {
+          splitPlayer(b);
         }
       }
       return;
     }
   }
 
-  // Bots schießen NIEMALS gezielt auf Viren — kein Virus-Beschuss-Verhalten hier.
+  // ── VIRUS SHOOTING at enemies ────────────────────────────────
+  // If there's an enemy behind a virus, shoot at it
+  if(intel>0.5&&freeSlots>=2){
+    let bestVirusTarget=null, bestVScore=-Infinity;
+    for(const v of viruses){
+      const vd=dist(v.x,v.y,cen.x,cen.y);
+      if(vd>800) continue;
+      // Check if any enemy is behind this virus relative to bot
+      for(const p of players){
+        if(p===b||p.dead)continue;
+        if((curMode==='teams'||curMode==='duo')&&p.teamId===b.teamId&&b.teamId>=0)continue;
+        const pc=pCenter(p);
+        const pd=dist(pc.x,pc.y,cen.x,cen.y);
+        // Virus should be roughly between bot and enemy
+        const virusOnLine=dist(v.x,v.y,pc.x,pc.y)<mToR(pMass(p))*3+120;
+        const enemyBehindVirus=pd>vd*.7;
+        const aimScore=(pMass(p)/(vd+1))*2;
+        if(virusOnLine&&enemyBehindVirus&&aimScore>bestVScore&&big.mass>cfg.minSplitMass*1.5){
+          bestVScore=aimScore;
+          bestVirusTarget={v,enemy:p};
+        }
+      }
+    }
+   if(bestVirusTarget && bestVScore>2.5 && Math.random()<0.001){
+      // Aim at virus to shoot it
+      b.target.x=bestVirusTarget.v.x;
+      b.target.y=bestVirusTarget.v.y;
+      ejectMass(b);
+      clampTgt(b.target);
+      // If we have 10 hits ready, this will auto-shoot
+      return;
+    }
+  }
 
   // ── HUNT / PREY SELECTION ────────────────────────────────────
   const huntRange=850+aggr*950;
@@ -1170,13 +1092,10 @@ function eatPlayers(){
       for(const q of players){
         if(q===p||q.dead)continue;
         if(curMode==='teams'&&q.teamId===p.teamId&&p.teamId>=0)continue;
-        // Im Duo dürfen sich Partner gegenseitig Teile wegessen — nur das jeweils
-        // letzte Stück eines Partners ist tabu, damit der Partner dadurch nie stirbt.
-        const isDuoMatePair = curMode==='duo'&&q.teamId===p.teamId&&p.teamId>=0;
+        if(curMode==='duo'&&q.teamId===p.teamId&&p.teamId>=0)continue;
         const qc=pCenter(q);
         if(dist(c.x,c.y,qc.x,qc.y)>r+mToR(pMass(q)))continue;
         for(let i=q.pieces.length-1;i>=0;i--){
-          if(isDuoMatePair&&q.pieces.length<=1) break; // letztes Stück des Partners ist unantastbar
           const t=q.pieces[i];
           let canEat=false;
           if(curMode==='reverse'){
@@ -1198,8 +1117,7 @@ function eatPlayers(){
             q.pieces.splice(i,1);
           }
         }
-        // Duo-Partner kann durch gegenseitiges Fressen nie sterben (letztes Stück bleibt immer).
-        if(q.pieces.length===0&&!isDuoMatePair){q.dead=true;p.kills++;}
+        if(q.pieces.length===0){q.dead=true;p.kills++;}
       }
     }
   }
@@ -1330,31 +1248,16 @@ function doChaos(){
 }
 
 function respawnBots(){
-  // Battle Royale: kein Respawn — Last Man Standing, Tote bleiben tot bis zur nächsten Runde.
-  if(curMode==='br') return;
   for(const p of players){
     if(p===me||!p.isBot||!p.dead)continue;
-    // Team/Duo-Zugehörigkeit bleibt erhalten statt neu ausgewürfelt zu werden,
-    // sonst wandern Bots zwischen Teams und die Teamgrößen verschieben sich.
-    const keepName=p.name, keepColor=p.color, keepTeamId=p.teamId, keepDuoMate=p.duoMate, keepIsJugg=p.isJuggernaut;
-    const nb=mkPlayer(keepName,true,keepTeamId);
-    nb.color=keepColor;
-    nb.teamId=keepTeamId;
-    nb.duoMate=keepDuoMate;
+    let tid=-1; if(curMode==='teams')tid=ri(4);
+    const nb=mkPlayer(BOT_NAMES[ri(BOT_NAMES.length)],true,tid);
     // Juggernaut never respawns normally
-    if(curMode==='jugger'&&keepIsJugg){
+    if(curMode==='jugger'&&p.isJuggernaut){
       nb.isJuggernaut=true; nb.color='#ff9f43'; nb.name='⚡JUGGERNAUT';
       nb.pieces=[mkPiece(nb,rand(500,WW()-500),rand(500,WW()-500),5000)];
     }
     Object.assign(p,nb); p.dead=false;
-    // Duo: falls der Partner noch lebt, in seiner Nähe respawnen statt zufällig auf der Karte
-    if(curMode==='duo'&&p.duoMate&&!p.duoMate.dead){
-      const mc=pCenter(p.duoMate);
-      const rx=clamp(mc.x+rand(-180,180),200,WW()-200);
-      const ry=clamp(mc.y+rand(-180,180),200,WW()-200);
-      p.pieces=[mkPiece(p,rx,ry,initMass(true))];
-      p.target.x=rx; p.target.y=ry;
-    }
     if(curMode==='infect'&&Math.random()<0.4) infectBlobPlayer(p);
   }
 }
@@ -1634,18 +1537,6 @@ function drawPlayers(){
       ctx.strokeStyle=`rgba(255,159,67,${pulse})`; ctx.lineWidth=5;
       ctx.beginPath(); ctx.arc(sx,sy,r+4,0,Math.PI*2); ctx.stroke();
     }
-    // Duo-Teammate-Markierung: deutlicher grüner Ring, damit man den Partner
-    // auf der Karte sofort erkennt (zusätzlich zur Minimap-Markierung).
-    if(curMode==='duo'&&me&&p===me.duoMate){
-      ctx.strokeStyle='#00e676'; ctx.lineWidth=Math.max(2,3*cam.s);
-      ctx.beginPath(); ctx.arc(sx,sy,r+5*cam.s,0,Math.PI*2); ctx.stroke();
-      if(r>14){
-        ctx.font=`bold ${Math.max(11,r*.26)}px Arial`;
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillStyle='#00e676';
-        ctx.fillText('👥',sx,sy-r-12*cam.s);
-      }
-    }
 
     if(r>16){
       if(cfg.showNames){
@@ -1704,15 +1595,9 @@ function drawMinimap(){
     const c=pCenter(p);
     const mx=(c.x/W2)*S, my=(c.y/W2)*S;
     const mr=Math.min(6,Math.sqrt(pMass(p))*.12+2);
-    const isMyMate = curMode==='duo'&&me&&p===me.duoMate;
     mctx.fillStyle=p===me?'#ffd740':p.color;
     mctx.beginPath(); mctx.arc(mx,my,mr,0,Math.PI*2); mctx.fill();
     if(p===me){mctx.strokeStyle='#fff';mctx.lineWidth=1;mctx.stroke();}
-    if(isMyMate){
-      // Teammate bekommt einen deutlichen grünen Ring zur Wiedererkennung
-      mctx.strokeStyle='#00e676'; mctx.lineWidth=1.6;
-      mctx.beginPath(); mctx.arc(mx,my,mr+2.5,0,Math.PI*2); mctx.stroke();
-    }
   }
   const vx=((cam.x-W/2/cam.s)/W2)*S, vy=((cam.y-H/2/cam.s)/W2)*S;
   const vw=(W/cam.s/W2)*S, vh=(H/cam.s/W2)*S;
@@ -1750,11 +1635,6 @@ function updateHUD(){
   const ex=document.getElementById('hudExtra');
   if(curMode==='koth'&&leader){ ex.style.display='block'; ex.textContent='⏱ '+fmtMass(pMass(leader))+' Masse'; }
   else if(curMode==='infect'){ ex.style.display='block'; ex.textContent='🧟 '+infectedSet.size+' infiziert'; }
-  else if(curMode==='duo'&&me&&me.duoMate){
-    ex.style.display='block';
-    if(me.duoMate.dead) ex.textContent='👥 '+me.duoMate.name+': ☠ tot';
-    else ex.textContent='👥 '+me.duoMate.name+': '+fmtMass(pMass(me.duoMate));
-  }
   else { ex.style.display='none'; }
 
   // Leaderboard
