@@ -3,211 +3,186 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no"/>
-<title>Blob.io — Offline Pro</title>
+<title>Blob.io — Instant Merge</title>
 <style>
-/* ---------- GLOBAL ---------- */
-html,body{
-margin:0;padding:0;box-sizing:border-box;
-background:var(--bg);
-font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
-color:#fff;
-width:100%;height:100%;
-}
-:root{
---bg:#0b0b16;--bg2:#12122a;--panel:rgba(14,14,32,0.92);
---border:rgba(130,100,255,0.22);--accent:#8b7cf8;--accent2:#00d9ff;
---green:#00e676;--red:#ff4757;--yellow:#ffd740;--orange:#ff9f43;
---shadow:0 12px 48px rgba(0,0,0,.75);--r:12px;
-}
+html,body{margin:0;padding:0;box-sizing:border-box;background:var(--bg);
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;color:#fff;width:100%;height:100%;}
+:root{--bg:#0b0b16;--panel:rgba(10,10,26,0.93);--border:rgba(130,100,255,0.28);
+  --accent:#8b7cf8;--accent2:#00d9ff;--green:#00e676;--red:#ff4757;--yellow:#ffd740;
+  --orange:#ff9f43;--shadow:0 12px 48px rgba(0,0,0,.75);--r:12px;}
+#gameWrap{position:fixed;inset:0;overflow:hidden;touch-action:none;z-index:0;}
+canvas{display:block;position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:all;touch-action:none;}
+#gc{z-index:1;background:#f0f0f0;}
 
-/* ---------- GAME WRAPPER (nur dieser Bereich blockiert Scroll/Zoom) ---------- */
-#gameWrap{
+/* ── HUD ── */
+#hud{
 position:fixed;
-inset:0;
-overflow:hidden;
-touch-action:none; /* verhindert Scroll & Zoom NUR im Spielbereich */
-z-index:0;
-}
-
-/* ---------- CANVAS ---------- */
-canvas{
-display:block;
-position:fixed;
-top:0;left:0;
-width:100%;height:100%;
-pointer-events:all;
-touch-action:none;
-}
-#gc{z-index:1;background:#f5f5f5;}
-
-/* ---------- HUD ---------- */
-#hud{position:fixed;top:14px;left:14px;z-index:10;padding:10px 16px;
-padding-top:max(10px,env(safe-area-inset-top));min-width:130px}
+bottom:14px;
+right:14px;
+top:auto;
+left:auto;
+  padding-top:max(10px,env(safe-area-inset-top));
+  background:rgba(8,8,24,0.90);border:1.5px solid var(--border);
+  border-radius:13px;backdrop-filter:blur(14px);min-width:120px;}
 #hud .lbl{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4);font-weight:600}
-#hud .mv{font-size:24px;font-weight:900;color:var(--accent2);line-height:1.1;font-variant-numeric:tabular-nums}
+#hud .mv{font-size:26px;font-weight:900;color:var(--accent2);line-height:1.1;font-variant-numeric:tabular-nums}
 #hud .badge{display:inline-block;margin-top:5px;padding:2px 10px;border-radius:20px;
-font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+  font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase}
+#hudExtra{font-size:12px;color:var(--yellow);margin-top:4px;font-weight:700;display:none}
 
-/* ---------- LEADERBOARD ---------- */
-#lb{position:fixed;top:14px;right:14px;z-index:10;padding:12px 16px;min-width:175px;
-padding-top:max(12px,env(safe-area-inset-top))}
-#lb h3{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--yellow);margin-bottom:8px}
-.lbr{display:flex;align-items:center;gap:7px;padding:2px 0;font-size:12px}
-.lbr .rk{font-size:10px;color:rgba(255,255,255,.35);min-width:14px}
-.lbr .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.lbr .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ── LEADERBOARD (left, big, visible) ── */
+#lb{
+position:fixed;
+top:115px;
+left:14px;
+  min-width:200px;max-width:230px;
+  background:rgba(6,6,20,0.95);border:2px solid rgba(139,124,248,0.4);
+  border-radius:13px;backdrop-filter:blur(16px);
+  box-shadow:0 6px 32px rgba(0,0,0,.6),0 0 0 1px rgba(139,124,248,.08) inset;}
+#lb h3{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;
+  color:var(--yellow);margin:0 0 10px 0;display:flex;align-items:center;gap:6px}
+.lbr{display:flex;align-items:center;gap:7px;padding:3px 0;font-size:13px}
+.lbr .rk{font-size:10px;color:rgba(255,255,255,.4);min-width:16px;font-weight:700}
+.lbr .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.lbr .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .lbr .nm.me{color:var(--yellow);font-weight:800}
-.lbr .ms{font-size:11px;color:rgba(255,255,255,.55);font-variant-numeric:tabular-nums}
+.lbr .ms{font-size:12px;color:rgba(255,255,255,.75);font-variant-numeric:tabular-nums;font-weight:700}
+.lb-team-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:13px;font-weight:700;
+  border-radius:7px;}
+.lb-team-dot{width:13px;height:13px;border-radius:3px;flex-shrink:0}
+.lb-team-name{flex:1;font-size:12px}
+.lb-team-mass{font-size:12px;color:rgba(255,255,255,.85);font-variant-numeric:tabular-nums}
+.lb-div{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.3);
+  margin:8px 0 5px;padding-top:7px;border-top:1px solid rgba(255,255,255,.1);font-weight:700}
 
-/* ---------- TOP CENTER ---------- */
+/* ── TOP CENTER ── */
 #topCenter{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:12;
-display:flex;flex-direction:column;align-items:center;gap:8px;
-padding-top:max(0px,env(safe-area-inset-top))}
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  padding-top:max(0px,env(safe-area-inset-top))}
 #settingsBtn{width:40px;height:40px;border-radius:50%;border:1px solid var(--border);
-background:var(--panel);color:#fff;font-size:17px;cursor:pointer;
-backdrop-filter:blur(12px);transition:all .2s;display:none;align-items:center;justify-content:center}
+  background:var(--panel);color:#fff;font-size:17px;cursor:pointer;
+  backdrop-filter:blur(12px);transition:all .2s;display:none;align-items:center;justify-content:center}
 #settingsBtn:hover{background:var(--accent);transform:rotate(40deg)}
 #settingsBtn.vis{display:flex}
 #specBanner{padding:7px 18px;border-radius:24px;font-size:13px;
-display:none;align-items:center;gap:12px;white-space:nowrap}
+  display:none;align-items:center;gap:12px;white-space:nowrap;
+  background:rgba(8,8,24,0.92);border:1px solid var(--border);}
 #specBanner button{background:var(--accent);border:none;color:#fff;
-padding:5px 14px;border-radius:12px;font-size:11px;font-weight:800;cursor:pointer}
+  padding:5px 14px;border-radius:12px;font-size:11px;font-weight:800;cursor:pointer}
 
-/* ---------- ZONE WARNING ---------- */
+/* ── WARNINGS ── */
 #zoneWarn{position:fixed;top:60px;left:50%;transform:translateX(-50%);
-background:rgba(255,50,50,.9);color:#fff;padding:7px 22px;border-radius:20px;
-font-size:13px;font-weight:800;z-index:15;display:none;pointer-events:none;
-animation:pulse .5s ease infinite alternate}
+  background:rgba(255,50,50,.9);color:#fff;padding:7px 22px;border-radius:20px;
+  font-size:13px;font-weight:800;z-index:15;display:none;pointer-events:none;
+  animation:pulse .5s ease infinite alternate}
 @keyframes pulse{from{opacity:.7}to{opacity:1}}
+#brBanner{position:fixed;bottom:220px;left:50%;transform:translateX(-50%);
+  background:rgba(200,30,30,0.93);color:#fff;padding:10px 24px;border-radius:20px;
+  font-size:14px;font-weight:800;z-index:15;display:none;pointer-events:none;
+  text-align:center;border:1px solid rgba(255,255,255,.2);}
+#infectBanner{position:fixed;top:60px;right:14px;z-index:15;padding:8px 14px;
+  background:rgba(30,100,30,0.92);border:1px solid #4caf50;border-radius:10px;
+  font-size:12px;font-weight:800;display:none;pointer-events:none;}
 
-/* ---------- EVENT BANNER ---------- */
+/* ── EVENTS ── */
 #evtBanner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-text-align:center;z-index:15;pointer-events:none;display:none;
-transition:opacity .4s}
+  text-align:center;z-index:15;pointer-events:none;display:none;transition:opacity .4s}
 #evtBanner .et{font-size:40px;font-weight:900;text-shadow:0 0 30px rgba(255,255,255,.5)}
 #evtBanner .ed{font-size:15px;color:rgba(255,255,255,.7);margin-top:6px}
-
-/* ---------- WINNER BANNER ---------- */
 #winnerBanner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-text-align:center;z-index:30;pointer-events:none;display:none;
-background:rgba(0,0,0,.85);border-radius:20px;padding:32px 48px;
-border:2px solid var(--yellow)}
-#winnerBanner .wt{font-size:48px;font-weight:900;color:var(--yellow)}
-#winnerBanner .wd{font-size:16px;color:rgba(255,255,255,.7);margin-top:8px}
+  text-align:center;z-index:30;pointer-events:none;display:none;
+  background:rgba(0,0,0,.87);border-radius:20px;padding:32px 48px;
+  border:2px solid var(--yellow)}
+#winnerBanner .wt{font-size:44px;font-weight:900;color:var(--yellow)}
+#winnerBanner .wd{font-size:15px;color:rgba(255,255,255,.7);margin-top:8px}
 
-/* ---------- MINIMAP ---------- */
-#mm{position:fixed;bottom:14px;right:14px;z-index:10;overflow:hidden;
-padding-bottom:max(0px,env(safe-area-inset-bottom));border-radius:10px}
-#mmC{display:block;position:static;width:118px;height:118px;touch-action:auto;pointer-events:none}
-
-/* ---------- TOUCH BUTTONS ---------- */
-#tc{position:fixed;bottom:0;left:0;z-index:15;display:none;gap:10px;padding:14px;
-padding-bottom:max(14px,env(safe-area-inset-bottom))}
-#tc button{width:66px;height:66px;border-radius:50%;border:2px solid rgba(255,255,255,.25);
-backdrop-filter:blur(8px);color:#fff;font-size:12px;font-weight:800;
-display:flex;align-items:center;justify-content:center;user-select:none;cursor:pointer;
--webkit-user-select:none}
-.tsplit{background:rgba(139,124,248,.6)}
-.tthrow{background:rgba(0,217,255,.4)}
-.tdbl{background:rgba(0,230,118,.4)}
-.ttrp{background:rgba(255,71,87,.5)}
-
-/* ---------- MAIN OVERLAY (Menu) ---------- */
-#overlay{
+/* ── BOTTOM-LEFT: minimap + touch buttons ── */
+#bottomLeft{
 position:fixed;
-inset:0;
-z-index:20;
-display:flex;
-align-items:flex-start;
-justify-content:center;
-overflow-y:auto; /* Menü ist scrollbar */
--webkit-overflow-scrolling:touch;
-touch-action:auto; /* erlaubt Scroll/Zoom-Gesten im Menü */
-background:radial-gradient(ellipse at 40% 30%,#1a103a 0%,#080810 70%);
-}
+top:14px;
+left:14px;
+bottom:auto;
+  display:flex;align-items:flex-end;gap:12px;
+  padding:14px;
+  padding-bottom:max(14px,env(safe-area-inset-bottom));
+  padding-left:max(14px,env(safe-area-inset-left));
+  pointer-events:none;}
+#bottomLeft>*{pointer-events:all;}
+#mm{border-radius:10px;overflow:hidden;border:1.5px solid rgba(139,124,248,.22);}
+#mmC{display:block;width:108px;height:108px;touch-action:auto;pointer-events:none}
+
+/* ── TOUCH BUTTONS ── */
+#tc{display:none;align-items:flex-end;}
+.tcGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:end;}
+#tc button{border-radius:14px;border:2.5px solid rgba(255,255,255,.55);
+  background:rgba(255,255,255,.2);backdrop-filter:blur(4px);color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  user-select:none;cursor:pointer;-webkit-user-select:none;
+  box-shadow:0 4px 14px rgba(0,0,0,.4);transition:transform .08s,background .12s;padding:0;}
+#tc button:active{background:rgba(255,255,255,.4);transform:scale(.92);}
+#bSp{width:90px;height:90px;}
+#bTh{width:72px;height:72px;}
+#bDb{width:58px;height:58px;}
+#bTr{width:58px;height:58px;}
+.btn-icon{font-size:22px;line-height:1}
+.btn-lbl{font-size:10px;font-weight:900;letter-spacing:.8px}
+
+/* ── OVERLAY MENU ── */
+#overlay{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-start;
+  justify-content:center;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:auto;
+  background:radial-gradient(ellipse at 40% 30%,#1a103a 0%,#080810 70%);}
 #overlay::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
-background:
-radial-gradient(circle at 20% 20%,rgba(139,124,248,.12) 0%,transparent 50%),
-radial-gradient(circle at 80% 70%,rgba(0,217,255,.1) 0%,transparent 50%),
-radial-gradient(circle at 60% 10%,rgba(0,230,118,.07) 0%,transparent 40%);
-animation:ambientMove 12s ease-in-out infinite alternate}
-@keyframes ambientMove{
-0%{background-position:0 0,100% 70%,60% 10%}
-100%{background-position:5% 5%,95% 65%,65% 15%}}
-
-.oc{width:540px;max-width:96vw;padding:20px;
-display:flex;flex-direction:column;gap:14px;position:relative;z-index:1;
-padding-top:max(20px,env(safe-area-inset-top));
-padding-bottom:max(20px,env(safe-area-inset-bottom));
-touch-action:auto;}
-
-/* ---------- LOGO ---------- */
+  background:radial-gradient(circle at 20% 20%,rgba(139,124,248,.12) 0%,transparent 50%),
+    radial-gradient(circle at 80% 70%,rgba(0,217,255,.1) 0%,transparent 50%);
+  animation:ambientMove 12s ease-in-out infinite alternate}
+@keyframes ambientMove{0%{opacity:.8}100%{opacity:1}}
+.oc{width:540px;max-width:96vw;padding:20px;display:flex;flex-direction:column;gap:14px;
+  position:relative;z-index:1;
+  padding-top:max(20px,env(safe-area-inset-top));
+  padding-bottom:max(20px,env(safe-area-inset-bottom));touch-action:auto;}
 .logo{text-align:center}
 .logo-title{font-size:52px;font-weight:900;letter-spacing:-2px;line-height:1;
-background:linear-gradient(135deg,#c4b8ff 0%,var(--accent) 40%,var(--accent2) 100%);
--webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  background:linear-gradient(135deg,#c4b8ff 0%,var(--accent) 40%,var(--accent2) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .logo-sub{font-size:11px;text-transform:uppercase;letter-spacing:3px;
-color:rgba(255,255,255,.3);margin-top:4px}
-
-/* ---------- CARD ---------- */
-.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:var(--r);padding:14px 18px}
-.card-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.35);font-weight:600;margin-bottom:8px}
+  color:rgba(255,255,255,.3);margin-top:4px}
+.card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r);padding:14px 18px}
+.card-label{font-size:10px;text-transform:uppercase;letter-spacing:.8px;
+  color:rgba(255,255,255,.35);font-weight:600;margin-bottom:8px}
 input.name-in{width:100%;padding:11px 14px;font-size:16px;font-weight:700;
-background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
-border-radius:9px;color:#fff;outline:none;transition:border-color .2s}
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  border-radius:9px;color:#fff;outline:none;transition:border-color .2s;box-sizing:border-box;}
 input.name-in:focus{border-color:var(--accent)}
-
-/* ---------- MODE GRID ---------- */
 .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .mc{padding:10px 12px;border-radius:10px;cursor:pointer;
-background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.07);
-transition:all .15s;display:flex;align-items:center;gap:9px;user-select:none}
+  background:rgba(255,255,255,.03);border:1.5px solid rgba(255,255,255,.07);
+  transition:all .15s;display:flex;align-items:center;gap:9px;user-select:none}
 .mc:hover{background:rgba(139,124,248,.12);border-color:var(--accent)}
 .mc.active{background:rgba(139,124,248,.22);border-color:var(--accent);
-box-shadow:0 0 0 1px rgba(139,124,248,.3) inset}
+  box-shadow:0 0 0 1px rgba(139,124,248,.3) inset}
 .mc .mi{font-size:20px;flex-shrink:0}
 .mc .mn{font-size:12px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mc .md{font-size:10px;color:rgba(255,255,255,.4);margin-top:1px}
-
-/* ---------- PLAY BUTTONS ---------- */
 .pbuts{display:flex;gap:10px}
 .bp{padding:14px;font-size:16px;font-weight:900;border:none;border-radius:10px;
-color:#fff;cursor:pointer;transition:all .15s;letter-spacing:.5px}
+  color:#fff;cursor:pointer;transition:all .15s;letter-spacing:.5px}
 .bp-main{flex:2;background:linear-gradient(135deg,var(--accent) 0%,#6054d6 100%);
-box-shadow:0 4px 24px rgba(139,124,248,.4)}
+  box-shadow:0 4px 24px rgba(139,124,248,.4)}
 .bp-main:hover{transform:translateY(-2px);box-shadow:0 6px 30px rgba(139,124,248,.6)}
 .bp-sec{flex:1;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1)}
 .bp-sec:hover{background:rgba(255,255,255,.12)}
 .hint{text-align:center;color:rgba(255,255,255,.28);font-size:11px;line-height:1.9}
 .hint a{color:var(--accent);text-decoration:none}
 
-/* ---------- SETTINGS ---------- */
-#sp{
-position:fixed;
-inset:0;
-z-index:30;
-display:none;
-align-items:center;
-justify-content:center;
-background:rgba(0,0,0,.7);
-backdrop-filter:blur(5px);
-overflow-y:auto;
-touch-action:auto;
--webkit-overflow-scrolling:touch;
-}
-.sbox{
-width:420px;
-max-width:95vw;
-max-height:88vh;
-overflow-y:auto;
--webkit-overflow-scrolling:touch;
-touch-action:auto;
-background:#0e0e22;
-border:1px solid rgba(139,124,248,.25);
-border-radius:16px;padding:24px;
-box-shadow: var(--shadow);
-margin:auto;
-}
+/* ── SETTINGS ── */
+#sp{position:fixed;inset:0;z-index:30;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(5px);overflow-y:auto;
+  touch-action:auto;-webkit-overflow-scrolling:touch;}
+.sbox{width:420px;max-width:95vw;max-height:88vh;overflow-y:auto;
+  -webkit-overflow-scrolling:touch;touch-action:auto;
+  background:#0e0e22;border:1px solid rgba(139,124,248,.25);
+  border-radius:16px;padding:24px;box-shadow:var(--shadow);margin:auto;}
 .sbox h2{font-size:19px;font-weight:900;text-align:center;margin-bottom:18px}
 .ssec{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);
   margin:16px 0 6px;font-weight:800}
@@ -229,7 +204,7 @@ margin:auto;
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:2px}
 
-/* ── DEATH SCREEN ─────────────────────────────── */
+/* ── DEATH SCREEN ── */
 #ds{position:fixed;inset:0;z-index:25;display:none;align-items:center;
   justify-content:center;background:rgba(0,0,0,.65);backdrop-filter:blur(8px);
   overflow-y:auto;touch-action:auto}
@@ -242,49 +217,55 @@ margin:auto;
 .dstats b{color:#fff;font-weight:800}
 .dbuts{display:flex;gap:10px}
 
-/* BADGE COLORS */
+/* ── BADGES ── */
 .b-ffa{background:#7c6ff7}.b-teams{background:#e53935}.b-br{background:#e67e22}
-.b-rush{background:#00bcd4}.b-virus{background:#2e7d32}.b-giant{background:#6a1b9a}
-.b-speed{background:#0288d1}.b-nano{background:#00695c}.b-dom{background:#c6a700}
-.b-chaos{background:#c62828}
+.b-koth{background:#c6a700}.b-chaos{background:#c62828}
+.b-infect{background:#2e7d32}.b-reverse{background:#0277bd}
+.b-jugger{background:#bf360c}.b-gold{background:#e65100}.b-mine{background:#4a148c}
 </style>
 </head>
 <body>
 
 <div id="gameWrap">
   <canvas id="gc"></canvas>
-  <div id="hud" class="glass">
-    <div class="lbl">Masse</div>
+
+  <div id="hud">
+    <div class="lbl" id="hudLbl">Masse</div>
     <div class="mv" id="mv">0</div>
     <div id="badge" class="badge b-ffa">FFA</div>
+    <div id="hudExtra"></div>
   </div>
 
-  <div id="lb" class="glass"><h3>🏆 Bestenliste</h3><div id="lbc"></div></div>
+  <div id="lb"><h3>🏆 Bestenliste</h3><div id="lbc"></div></div>
 
   <div id="topCenter">
     <button id="settingsBtn" title="Einstellungen">⚙️</button>
-    <div id="specBanner" class="glass">
+    <div id="specBanner">
       <span>👁 <b id="specNm" style="color:var(--yellow)">—</b></span>
       <button id="stopSpec">Mitspielen</button>
     </div>
   </div>
 
   <div id="zoneWarn">⚠ VERLASSE DIE ZONE!</div>
+  <div id="brBanner">☠ Ausgeschieden! Du schaust bis zur nächsten Runde zu.</div>
+  <div id="infectBanner"></div>
   <div id="evtBanner"><div class="et" id="evtT"></div><div class="ed" id="evtD"></div></div>
-
-  <!-- WINNER BANNER -->
   <div id="winnerBanner">
     <div class="wt">🏆 <span id="winnerName"></span> gewinnt!</div>
-    <div class="wd">200.000 Masse erreicht! Neue Runde startet...</div>
+    <div class="wd" id="winnerDesc">Neue Runde startet...</div>
   </div>
 
-  <div id="mm" class="glass"><canvas id="mmC" width="118" height="118"></canvas></div>
-
-  <div id="tc">
-    <button class="tsplit" id="bSp">Split</button>
-    <button class="tthrow" id="bTh">W</button>
-    <button class="tdbl" id="bDb">×2</button>
-    <button class="ttrp" id="bTr">×3</button>
+  <!-- BOTTOM-LEFT: minimap + touch buttons in same flex row -->
+  <div id="bottomLeft">
+    <div id="mm"><canvas id="mmC" width="108" height="108"></canvas></div>
+    <div id="tc">
+      <div class="tcGrid">
+        <button id="bSp"><div class="btn-icon">🔀</div><div class="btn-lbl">SPLIT</div></button>
+        <button id="bDb"><div class="btn-icon">✌️</div><div class="btn-lbl">D</div></button>
+        <button id="bTh"><div class="btn-icon">🎯</div><div class="btn-lbl">THROW</div></button>
+        <button id="bTr"><div class="btn-icon">⚡</div><div class="btn-lbl">T</div></button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -309,7 +290,7 @@ margin:auto;
     </div>
     <div class="hint">
       Maus / Touch = Bewegen &nbsp;·&nbsp; Leertaste = Split &nbsp;·&nbsp; W = Auswerfen<br>
-      D = ×2 Split &nbsp;·&nbsp; T = ×3 Split<br>
+      D = ×2 Split &nbsp;·&nbsp; T = ×3 Split &nbsp;·&nbsp; W auf Viren = Virus schießen (10× Treffer)<br>
       <a href="#" id="openSet">⚙ Einstellungen</a>
     </div>
   </div>
@@ -331,18 +312,15 @@ margin:auto;
 <div id="sp">
   <div class="sbox">
     <h2>⚙ Einstellungen</h2>
-
     <div class="ssec">🌍 Welt</div>
     <div class="sr"><label>Futter-Menge</label><input type="range" id="sFc" min="100" max="2000" step="50"><span class="v" id="sFcV"></span></div>
     <div class="sr"><label>Virus-Anzahl</label><input type="range" id="sVc" min="5" max="80" step="1"><span class="v" id="sVcV"></span></div>
     <div class="sr"><label>Welt-Größe</label><input type="range" id="sWs" min="3000" max="10000" step="500"><span class="v" id="sWsV"></span></div>
-
     <div class="ssec">🟢 Start & Wachstum</div>
     <div class="sr"><label>Start-Masse</label><input type="range" id="sStM" min="5" max="500" step="5"><span class="v" id="sStMV"></span></div>
     <div class="sr"><label>Start-Masse Bots</label><input type="range" id="sStB" min="5" max="500" step="5"><span class="v" id="sStBV"></span></div>
     <div class="sr"><label>Futter-Massewert</label><input type="range" id="sFm" min="1" max="10" step="1"><span class="v" id="sFmV"></span></div>
     <div class="sr"><label>Ziel-Masse (Sieg)</label><input type="range" id="sWin" min="2000" max="500000" step="1000"><span class="v" id="sWinV"></span></div>
-
     <div class="ssec">⚙ Mechanik</div>
     <div class="sr"><label>Masseverlust</label><div class="tog" id="sMdT"><div class="tok"></div></div></div>
     <div class="sr"><label>Verlustrate</label><input type="range" id="sMdr" min="1" max="10" step="1"><span class="v" id="sMdrV"></span></div>
@@ -356,69 +334,59 @@ margin:auto;
     <div class="sr"><label>Auswurf-Masse</label><input type="range" id="sEjM" min="5" max="50" step="1"><span class="v" id="sEjMV"></span></div>
     <div class="sr"><label>Viren teilen Spieler</label><div class="tog" id="sVsT"><div class="tok"></div></div></div>
     <div class="sr"><label>Virus-Mindestmasse</label><input type="range" id="sVm" min="50" max="300" step="10"><span class="v" id="sVmV"></span></div>
-
     <div class="ssec">🤖 Bots</div>
     <div class="sr"><label>Anzahl Bots</label><input type="range" id="sBc" min="0" max="100" step="1"><span class="v" id="sBcV"></span></div>
     <div class="sr"><label>Aggressivität</label><input type="range" id="sAg" min="1" max="10" step="1"><span class="v" id="sAgV"></span></div>
     <div class="sr"><label>Intelligenz</label><input type="range" id="sIn" min="1" max="10" step="1"><span class="v" id="sInV"></span></div>
-
     <div class="ssec">🎨 Grafik</div>
     <div class="sr"><label>Partikel</label><div class="tog" id="sPaT"><div class="tok"></div></div></div>
     <div class="sr"><label>Gitter</label><div class="tog" id="sGrT"><div class="tok"></div></div></div>
     <div class="sr"><label>Namen</label><div class="tog" id="sNmT"><div class="tok"></div></div></div>
     <div class="sr"><label>Masse auf Blob</label><div class="tog" id="sMbT"><div class="tok"></div></div></div>
     <div class="sr"><label>Minimap</label><div class="tog" id="sMMT"><div class="tok"></div></div></div>
-
     <div class="ssec">📱 Steuerung</div>
     <div class="sr"><label>Touch-Buttons erzwingen</label><div class="tog" id="sTcT"><div class="tok"></div></div></div>
-
     <button class="scls" id="sCls">Schließen</button>
   </div>
 </div>
 
 <script>
-// ════════════════════════════════════════════════════════════════════
-//  BLOB.IO — OFFLINE PRO  |  10 Game Modes | Smart Bots | Agar.io-Merge
-// ════════════════════════════════════════════════════════════════════
+// ══════════════════════════════════════════════════════════════
+//  BLOB.IO — OFFLINE PRO  |  10 Modi | Smart Bots | Agar.io-Merge
+// ══════════════════════════════════════════════════════════════
 
-// ── DOPPELKLICK-ZOOM DEAKTIVIEREN (nur im Spielbereich) ──────────────
+// ── Block zoom only in game area ──────────────────────────────
 const gameWrap = document.getElementById('gameWrap');
-gameWrap.addEventListener('dblclick', e => e.preventDefault(), { passive: false });
-
+gameWrap.addEventListener('dblclick', e => e.preventDefault(), {passive:false});
 let lastTap = 0;
 gameWrap.addEventListener('touchstart', e => {
   const now = Date.now();
-  if (now - lastTap < 350) {
-    e.preventDefault(); // Doppel-Tap verhindern, aber nur im Spielbereich
-  }
+  if(now - lastTap < 350) e.preventDefault();
   lastTap = now;
-}, { passive: false });
+}, {passive:false});
+gameWrap.addEventListener('touchmove', e => { if(e.touches.length>1) e.preventDefault(); }, {passive:false});
+gameWrap.addEventListener('gesturestart', e => e.preventDefault(), {passive:false});
+gameWrap.addEventListener('gesturechange', e => e.preventDefault(), {passive:false});
 
-// Pinch-Zoom / Mehrfingergesten nur im Spielbereich blockieren
-gameWrap.addEventListener('touchmove', e => {
-  if (e.touches.length > 1) e.preventDefault();
-}, { passive: false });
-gameWrap.addEventListener('gesturestart', e => e.preventDefault(), { passive:false });
-gameWrap.addEventListener('gesturechange', e => e.preventDefault(), { passive:false });
-gameWrap.addEventListener('gestureend', e => e.preventDefault(), { passive:false });
-
-const GC  = document.getElementById('gc');
+const GC = document.getElementById('gc');
 const ctx = GC.getContext('2d');
-const MC  = document.getElementById('mmC');
-const mctx= MC.getContext('2d');
+const MC = document.getElementById('mmC');
+const mctx = MC.getContext('2d');
 
-// ── CONSTANTS ────────────────────────────────────────────────────────
+// ── CONSTANTS ─────────────────────────────────────────────────
 const COLORS = [
   '#e53935','#fb8c00','#fdd835','#43a047','#1e88e5',
   '#5e35b1','#d81b60','#00897b','#3949ab','#7cb342',
   '#00acc1','#f06292','#ff7043','#ab47bc','#4db6ac'
 ];
 const TEAM_COLS = {
-  0:['#ef5350','#e53935','#c62828'],
-  1:['#42a5f5','#1e88e5','#1565c0'],
-  2:['#66bb6a','#43a047','#2e7d32'],
-  3:['#ffee58','#fdd835','#f9a825'],
+  0:['#ef5350','#e53935','#c62828'],  // Rot
+  1:['#42a5f5','#1e88e5','#1565c0'],  // Blau
+  2:['#66bb6a','#43a047','#2e7d32'],  // Grün
+  3:['#ffee58','#fdd835','#f9a825'],  // Gelb
 };
+const TEAM_MAIN = ['#e53935','#1e88e5','#43a047','#fdd835'];
+const TEAM_NAMES = ['🔴 Rot','🔵 Blau','🟢 Grün','🟡 Gelb'];
 const BOT_NAMES = [
   'BlobKing','Toxic','Zero','Rush','Titan','Fury','Shadow','WunWun','Solo','Splitz',
   'Ghost','MegaBlob','Mars','Swift','Alpha','Hunter','Apex','Nova','Vortex','Crusher',
@@ -427,45 +395,49 @@ const BOT_NAMES = [
   'Golem','Chaos','Pyro','Frost','Giga','Nano','Pico','Tera','Mega','Ultra'
 ];
 const MODES = [
-  {id:'ffa',   icon:'⚔️', name:'Freier Kampf', desc:'Klassisches FFA',       badge:'b-ffa'  },
-  {id:'teams', icon:'🛡️', name:'Team Battle',  desc:'Rot vs. Blau',          badge:'b-teams'},
-  {id:'br',    icon:'☢️', name:'Battle Royale',desc:'Zone schrumpft!',       badge:'b-br'   },
-  {id:'rush',  icon:'⚡', name:'Rush Modus',   desc:'Alles schneller!',      badge:'b-rush' },
-  {id:'virus', icon:'🦠', name:'Virus Mayhem', desc:'Viren überall!',        badge:'b-virus'},
-  {id:'giant', icon:'👹', name:'Riesen-Modus', desc:'Alle starten groß',     badge:'b-giant'},
-  {id:'speed', icon:'💨', name:'Speed Blitz',  desc:'2× Geschwindigkeit',    badge:'b-speed'},
-  {id:'nano',  icon:'🔬', name:'Nano Modus',   desc:'Winzige Blobs',         badge:'b-nano' },
-  {id:'dom',   icon:'🏆', name:'Herrschaft',   desc:'Zonen kontrollieren',   badge:'b-dom'  },
-  {id:'chaos', icon:'🌪️',name:'Extremchaos',  desc:'Zufalls-Events!',       badge:'b-chaos'},
+  {id:'ffa',     icon:'⚔️', name:'Freier Kampf',   desc:'Klassisches FFA',              badge:'b-ffa'   },
+  {id:'teams',   icon:'🛡️', name:'Team Battle',    desc:'4 Teams: Rot Blau Grün Gelb',  badge:'b-teams' },
+  {id:'br',      icon:'☢️', name:'Battle Royale',  desc:'Last Man Standing!',           badge:'b-br'    },
+  {id:'koth',    icon:'🏆', name:'King of the Hill',desc:'Zeit in Zonen = Punkte!',     badge:'b-koth'  },
+  {id:'chaos',   icon:'🌪️',name:'Extremchaos',    desc:'Zufalls-Events!',              badge:'b-chaos' },
+  {id:'infect',  icon:'🧟', name:'Infektion',      desc:'Werde nicht infiziert!',       badge:'b-infect'},
+  {id:'reverse', icon:'🔄', name:'Umgekehrt',      desc:'Klein frisst Groß!',           badge:'b-reverse'},
+  {id:'jugger',  icon:'👊', name:'Juggernaut',     desc:'Einer gegen alle!',            badge:'b-jugger'},
+  {id:'gold',    icon:'⭐', name:'Goldfieber',     desc:'Sammle goldene Bälle (15 = Sieg)!', badge:'b-gold'},
+  {id:'mine',    icon:'💣', name:'Minenfeld',      desc:'Vermeide die Minen!',          badge:'b-mine'  },
 ];
 
-// ── SETTINGS ─────────────────────────────────────────────────────────
+// ── SETTINGS ──────────────────────────────────────────────────
 const DEF = {
   foodCount:1500, virusCount:20, worldSize:5000,
   startMass:50, startMassBot:60, foodMassVal:1, winMass:200000,
   massDecay:true, massDecayRate:3, minSplitMass:36,
   maxPieces:32, mergeTime:220, mergeThreshold:35, mergeMagnet:5,
   speedMult:10, splitForce:14, ejectMass:12,
-  virusSplit:true, virusMinMass:130, botCount:20, botAggression:7, botIntelligence:7,
+  virusSplit:true, virusMinMass:130, botCount:20, botAggression:8, botIntelligence:8,
   particles:true, grid:true, showNames:true, showMassOnBlob:true,
   minimap:true, touchControls:false,
 };
 let cfg = {...DEF};
 
-// ── GAME STATE ────────────────────────────────────────────────────────
+// ── GAME STATE ────────────────────────────────────────────────
 let W = innerWidth, H = innerHeight;
 let running=false, spectating=false, curMode='ffa';
 let players=[], foods=[], viruses=[], ejected=[], particles=[];
 let me=null;
 let safeZone=null, safeZoneInitR=null, zones=[], chaosCooldown=5000;
-let gameStart=0;
-let winnerShown=false;
+let gameStart=0, winnerShown=false;
+let mines=[], goldFoods=[];
+let infectedSet=new Set(), infectTimer=0;
+let juggernaut=null;
+const KOTH_WIN = 200;  // seconds equivalent in points
+const GOLD_WIN = 15;   // gold orbs to collect
 
 const cam = {x:0,y:0,s:1,tx:0,ty:0,ts:1};
 const mouse = {x:W/2,y:H/2};
 let moveTid=null;
 
-// ── UTILS ─────────────────────────────────────────────────────────────
+// ── UTILS ─────────────────────────────────────────────────────
 const rand  = (a,b)=>a+Math.random()*(b-a);
 const ri    = n=>Math.floor(Math.random()*n);
 const clamp = (v,lo,hi)=>v<lo?lo:v>hi?hi:v;
@@ -475,24 +447,12 @@ const mToR  = m=>Math.sqrt(Math.max(1,m))*4.2;
 const WW    = ()=>cfg.worldSize;
 
 function speedFor(m){
-  let base = 2.2*Math.pow(m,-0.22)*4.0*(cfg.speedMult/10);
-  if(curMode==='rush')  base*=1.6;
-  if(curMode==='speed') base*=2.1;
-  if(curMode==='nano')  base*=0.65;
-  return base;
+  return 2.2*Math.pow(m,-0.22)*4.0*(cfg.speedMult/10);
 }
-function decayMult(){ return curMode==='rush'?2.5:curMode==='giant'?1.2:1; }
 function initMass(isBot){
-  const base = isBot?cfg.startMassBot:cfg.startMass;
-  if(isBot){
-    if(curMode==='giant') return rand(base*15,base*33);
-    if(curMode==='nano')  return rand(2,10);
-    return rand(base*.17,base*2);
-  }
-  if(curMode==='giant') return rand(base*16.7,base*25);
-  if(curMode==='nano')  return rand(3,8);
-  if(curMode==='rush')  return rand(base*.4,base);
-  return base;
+  const base = isBot ? cfg.startMassBot : cfg.startMass;
+  if(curMode==='jugger' && isBot) return rand(base*.17, base*2);
+  return isBot ? rand(base*.17, base*2) : base;
 }
 function fmtMass(m){ return m>=1000?(m/1000).toFixed(1)+'k':Math.floor(m).toString(); }
 function pMass(p){ return p.pieces.reduce((s,c)=>s+c.mass,0); }
@@ -503,14 +463,22 @@ function pCenter(p){
 }
 function bigPiece(p){ return p.pieces.reduce((a,b)=>b.mass>a.mass?b:a,p.pieces[0]); }
 
-// ── ENTITY FACTORIES ─────────────────────────────────────────────────
+// ── ENTITY FACTORIES ──────────────────────────────────────────
 function mkFood(){
   const W2=WW();
   return{x:rand(15,W2-15),y:rand(15,W2-15),r:5,color:COLORS[ri(COLORS.length)],mass:cfg.foodMassVal};
 }
 function mkVirus(){
   const W2=WW();
-  return{x:rand(200,W2-200),y:rand(200,W2-200),mass:100,color:'#33d17a'};
+  return{x:rand(200,W2-200),y:rand(200,W2-200),mass:100,color:'#33d17a',feedCount:0,vx:0,vy:0,moving:false};
+}
+function mkGoldFood(){
+  const W2=WW();
+  return{x:rand(300,W2-300),y:rand(300,W2-300),r:14,mass:250,value:1};
+}
+function mkMine(){
+  const W2=WW();
+  return{x:rand(300,W2-300),y:rand(300,W2-300),r:20,active:true,cooldown:0};
 }
 function mkPiece(p,x,y,mass,vx=0,vy=0,mt=0){
   return{player:p,x,y,mass:Math.max(1,mass),vx,vy,mergeTimer:mt};
@@ -519,61 +487,112 @@ function mkPlayer(name,isBot,teamId=-1){
   const W2=WW();
   let color = teamId>=0 ? TEAM_COLS[teamId][ri(3)] : COLORS[ri(COLORS.length)];
   const p={name,isBot,dead:false,color,teamId,pieces:[],
-    target:{x:W2/2,y:W2/2},aiNext:0,kills:0,maxMass:0,score:0};
+    target:{x:W2/2,y:W2/2},aiNext:0,kills:0,maxMass:0,score:0,
+    kothScore:0,goldCount:0,infected:false};
   const x=rand(500,W2-500), y=rand(500,W2-500);
   p.pieces.push(mkPiece(p,x,y,initMass(isBot)));
   p.target.x=x; p.target.y=y;
   return p;
 }
 
-// ── INIT ──────────────────────────────────────────────────────────────
-function initGame(name,isSpec){
+// ── INIT ──────────────────────────────────────────────────────
+function initGame(name, isSpec){
   spectating=isSpec; gameStart=performance.now();
   players=[]; foods=[]; viruses=[]; ejected=[]; particles=[];
   zones=[]; safeZone=null; safeZoneInitR=null; chaosCooldown=6000;
-  winnerShown=false;
+  winnerShown=false; mines=[]; goldFoods=[];
+  infectedSet=new Set(); infectTimer=0; juggernaut=null;
   document.getElementById('winnerBanner').style.display='none';
+  document.getElementById('brBanner').style.display='none';
+  document.getElementById('infectBanner').style.display='none';
   const W2=WW();
-  const fc=curMode==='nano'?Math.floor(cfg.foodCount*.6):cfg.foodCount;
-  for(let i=0;i<fc;i++) foods.push(mkFood());
-  const vc=curMode==='virus'?cfg.virusCount*4:cfg.virusCount;
-  for(let i=0;i<vc;i++) viruses.push(mkVirus());
+  for(let i=0;i<cfg.foodCount;i++) foods.push(mkFood());
+  for(let i=0;i<cfg.virusCount;i++) viruses.push(mkVirus());
 
+  // Mode-specific world setup
   if(curMode==='br'){
-    const initR = W2*.46;
+    const initR=W2*.46;
     safeZone={x:W2/2,y:W2/2,r:initR,minR:W2*.04,shrinkDelay:14000};
-    safeZoneInitR = initR;
+    safeZoneInitR=initR;
   }
-  if(curMode==='dom'){
-    const pts=[[.2,.2],[.8,.2],[.5,.5],[.2,.8],[.8,.8]];
-    for(const[rx,ry] of pts) zones.push({x:W2*rx,y:W2*ry,r:110,owner:null,prog:0,color:'#888'});
+  if(curMode==='koth'){
+    const pts=[[.25,.25],[.75,.25],[.5,.5],[.25,.75],[.75,.75]];
+    for(const[rx,ry] of pts)
+      zones.push({x:W2*rx,y:W2*ry,r:110,owner:null,color:'#888',inZ:[]});
+  }
+  if(curMode==='mine'){
+    for(let i=0;i<40;i++) mines.push(mkMine());
+  }
+  if(curMode==='gold'){
+    for(let i=0;i<25;i++) goldFoods.push(mkGoldFood());
   }
 
+  // Create bots
   const shuffled=BOT_NAMES.slice().sort(()=>Math.random()-.5);
   for(let i=0;i<cfg.botCount;i++){
     let tid=-1;
-    if(curMode==='teams') tid=i%2;
+    if(curMode==='teams') tid=i%4;
     const b=mkPlayer(shuffled[i%shuffled.length],true,tid);
     players.push(b);
   }
 
+  // Juggernaut: first bot becomes the juggernaut
+  if(curMode==='jugger' && players.length>0){
+    juggernaut=players[0];
+    juggernaut.isJuggernaut=true;
+    juggernaut.color='#ff9f43';
+    juggernaut.name='⚡JUGGERNAUT';
+    juggernaut.pieces=[mkPiece(juggernaut,W2/2,W2/2,8000)];
+  }
+
+  // Create human player
   if(!isSpec){
     let tid=-1;
-    if(curMode==='teams') tid=1;
+    if(curMode==='teams') tid=ri(4);
     me=mkPlayer(name||'Spieler',false,tid);
-    me.color=curMode==='teams'?'#42a5f5':'#1e88e5';
+    if(curMode==='teams') me.color=TEAM_COLS[me.teamId][0];
+    else me.color='#1e88e5';
     players.push(me);
   } else { me=null; }
+
+  // Infection: one random bot is patient zero
+  if(curMode==='infect'){
+    infectTimer=3*60*1000;
+    const bots=players.filter(p=>p.isBot);
+    if(bots.length>0){ infectBlobPlayer(bots[ri(bots.length)]); }
+  }
 }
 
-// ── PHYSICS ───────────────────────────────────────────────────────────
+function infectBlobPlayer(p){
+  if(!p || p.infected) return;
+  p.infected=true;
+  infectedSet.add(p);
+}
+
+function respawnPlayer(){
+  if(!me) return;
+  const W2=WW();
+  const x=rand(500,W2-500), y=rand(500,W2-500);
+  me.dead=false;
+  me.kills=0; me.maxMass=0;
+  me.pieces=[mkPiece(me,x,y,cfg.startMass)];
+  me.target={x,y};
+  if(curMode==='infect'){ me.infected=false; infectedSet.delete(me); }
+  if(curMode==='gold') me.goldCount=0;
+  if(curMode==='koth') me.kothScore=0;
+  document.getElementById('ds').style.display='none';
+  running=true;
+}
+
+// ── PHYSICS ───────────────────────────────────────────────────
 function movePlayer(p,dt){
   const W2=WW();
   for(const c of p.pieces){
     if(c.mergeTimer>0) c.mergeTimer=Math.max(0,c.mergeTimer-dt);
     const dx=p.target.x-c.x, dy=p.target.y-c.y;
     const d=Math.hypot(dx,dy)||1;
-    const spd=speedFor(c.mass);
+    let spd=speedFor(c.mass);
+    if(curMode==='infect'&&p.infected) spd*=1.22;
     c.x+=(dx/d)*Math.min(spd,d*.16)+c.vx;
     c.y+=(dy/d)*Math.min(spd,d*.16)+c.vy;
     c.vx*=.86; c.vy*=.86;
@@ -581,13 +600,7 @@ function movePlayer(p,dt){
     const r=mToR(c.mass);
     c.x=clamp(c.x,r,W2-r); c.y=clamp(c.y,r,W2-r);
   }
-
-  // ── MERGE-LOGIK (Agar.io-Stil) ───────────────────────────────────
-  // Solange der Merge-Timer läuft: Teile dürfen sich frei überlappen/
-  // durchdringen (keine Abstoßung) und werden sanft zueinander gezogen,
-  // genau wie in agar.io. Erst wenn sie WIRKLICH stark überlappen
-  // (Abstand < mergeThreshold% des kombinierten Radius) UND beide
-  // Merge-Timer abgelaufen sind, verschmelzen sie tatsächlich.
+  // Merge logic
   for(let i=0;i<p.pieces.length;i++){
     for(let j=i+1;j<p.pieces.length;j++){
       const a=p.pieces[i], b=p.pieces[j];
@@ -596,45 +609,24 @@ function movePlayer(p,dt){
       const d=Math.hypot(dx,dy)||.001;
       const nx=dx/d, ny=dy/d;
       const sumR=ra+rb;
-
-      const bothReady = a.mergeTimer===0&&b.mergeTimer===0;
-      // Schwelle: bei 0% verschmelzen sie erst wenn die Mittelpunkte
-      // fast deckungsgleich sind; bei 90% schon bei leichter Überlappung.
-      const mergeDist = sumR*(1-cfg.mergeThreshold/100)*0.5;
-
-      if(bothReady && d<Math.max(mergeDist, Math.min(ra,rb)*0.35)){
-        // Tatsächlicher Merge
-        if(a.mass>=b.mass){
-          a.mass+=b.mass;
-          p.pieces.splice(j,1);
-          j--;
-        } else {
-          b.mass+=a.mass;
-          p.pieces.splice(i,1);
-          i--;
-          break;
-        }
+      const bothReady=a.mergeTimer===0&&b.mergeTimer===0;
+      const mergeDist=sumR*(1-cfg.mergeThreshold/100)*.5;
+      if(bothReady&&d<Math.max(mergeDist,Math.min(ra,rb)*.35)){
+        if(a.mass>=b.mass){ a.mass+=b.mass; p.pieces.splice(j,1); j--; }
+        else { b.mass+=a.mass; p.pieces.splice(i,1); i--; break; }
         continue;
       }
-
       if(bothReady){
-        // Bereit zum Verschmelzen, aber noch nicht nah genug:
-        // sanft zueinander ziehen statt abstoßen (agar.io-Feeling)
-        if(cfg.mergeMagnet>0 && d>mergeDist){
-          const pull = cfg.mergeMagnet*0.025;
-          a.x+=nx*pull; a.y+=ny*pull;
-          b.x-=nx*pull; b.y-=ny*pull;
+        if(cfg.mergeMagnet>0&&d>mergeDist){
+          const pull=cfg.mergeMagnet*.025;
+          a.x+=nx*pull; a.y+=ny*pull; b.x-=nx*pull; b.y-=ny*pull;
         }
-        // keine Kollisionsauflösung -> sie dürfen sich überlappen
       } else {
-        // Split-Phase (mergeTimer > 0): normale Abstoßung, damit
-        // frisch gesplittete Teile sich auseinanderschieben
         const ov=sumR-d;
         if(ov>0){
           const ms=a.mass+b.mass;
           const pA=ov*(b.mass/ms)*.6, pB=ov*(a.mass/ms)*.6;
-          a.x-=nx*pA; a.y-=ny*pA;
-          b.x+=nx*pB; b.y+=ny*pB;
+          a.x-=nx*pA; a.y-=ny*pA; b.x+=nx*pB; b.y+=ny*pB;
         }
       }
     }
@@ -659,7 +651,7 @@ function splitPlayer(p){
 }
 function multiSplit(p,times){
   let c=0;
-  const run=()=>{ if(c>=times)return; splitPlayer(p); c++; if(c<times)setTimeout(run,60); };
+  const run=()=>{ if(c>=times)return; splitPlayer(p); c++; if(c<times)setTimeout(run,45); };
   run();
 }
 function ejectMass(p){
@@ -674,15 +666,49 @@ function ejectMass(p){
   }
 }
 
-// ── BOT AI ────────────────────────────────────────────────────────────
+// ── BOT AI ────────────────────────────────────────────────────
 function botUpdate(b,now){
   if(now<b.aiNext)return;
   const intel=cfg.botIntelligence/10;
-  b.aiNext=now+rand(12,45)*(1.1-intel*.8);
+  const aggr=cfg.botAggression/10;
+  b.aiNext=now+rand(6,28)*(1.15-intel*.7)*(1.25-aggr*.55);
 
   const cen=pCenter(b), big=bigPiece(b), W2=WW();
+  const myMass=pMass(b);
+  const freeSlots=cfg.maxPieces-b.pieces.length;
 
-  // ── BATTLE ROYALE: Zonenkante meiden ────────────────────────
+  // Infection mode: infected bots hunt specifically
+  if(curMode==='infect'&&b.infected){
+    const targets=players.filter(p=>!p.dead&&!p.infected&&p!==b);
+    if(targets.length>0){
+      const t=targets.reduce((best,p)=>{
+        const d=dist(cen.x,cen.y,pCenter(p).x,pCenter(p).y);
+        return d<dist(cen.x,cen.y,pCenter(best).x,pCenter(best).y)?p:best;
+      },targets[0]);
+      const tc=pCenter(t); b.target.x=tc.x; b.target.y=tc.y;
+      clampTgt(b.target); return;
+    }
+  }
+
+  // KOTH: go to zone
+  if(curMode==='koth'&&zones.length){
+    const owned=zones.filter(z=>z.owner===b);
+    const best=zones.filter(z=>z.owner!==b)
+      .sort((a,z)=>dist(cen.x,cen.y,a.x,a.y)-dist(cen.x,cen.y,z.x,z.y))[0];
+    const target=owned.length<2&&best?best:owned[0]||best;
+    if(target&&dist(cen.x,cen.y,target.x,target.y)>target.r*.6){
+      b.target.x=target.x; b.target.y=target.y; clampTgt(b.target); return;
+    }
+  }
+
+  // Gold mode: go to nearest gold
+  if(curMode==='gold'&&goldFoods.length>0){
+    let ng=null,nd=Infinity;
+    for(const g of goldFoods){ const d=dist(g.x,g.y,cen.x,cen.y); if(d<nd){nd=d;ng=g;} }
+    if(ng&&nd<600){b.target.x=ng.x;b.target.y=ng.y;clampTgt(b.target);return;}
+  }
+
+  // Battle Royale zone avoidance
   if(curMode==='br'&&safeZone){
     const dz=dist(cen.x,cen.y,safeZone.x,safeZone.y);
     if(dz>safeZone.r*.82){
@@ -692,78 +718,83 @@ function botUpdate(b,now){
     }
   }
 
-  // ── DOMINATION ──────────────────────────────────────────────
-  if(curMode==='dom'&&zones.length){
-    const best=zones.filter(z=>z.owner!==b)
-      .sort((a,z)=>dist(cen.x,cen.y,a.x,a.y)-dist(cen.x,cen.y,z.x,z.y))[0];
-    if(best&&dist(cen.x,cen.y,best.x,best.y)>best.r*1.5){
-      b.target.x=best.x; b.target.y=best.y; clampTgt(b.target); return;
-    }
-  }
-
-  // ── PRIORITÄT 0: FLUCHT ──────────────────────────────────────
+  // Danger detection
+  const dangerMargin=1.32-aggr*.18, fleeRadiusMul=2.6-aggr*.9;
+  let biggestThreat=null, threatDist=Infinity, threatPiece=null;
   for(const p of players){
-    if(p===b||p.dead) continue;
-    if(curMode==='teams'&&p.teamId===b.teamId&&b.teamId>=0) continue;
-    const pm=bigPiece(p);
-    if(pm.mass>big.mass*1.22){
-      const d=dist(pm.x,pm.y,cen.x,cen.y);
-      if(d<380+mToR(pm.mass)*2.2){
-        b.target.x=cen.x+(cen.x-pm.x)*2.8;
-        b.target.y=cen.y+(cen.y-pm.y)*2.8;
-        clampTgt(b.target); return;
+    if(p===b||p.dead)continue;
+    if(curMode==='teams'&&p.teamId===b.teamId&&b.teamId>=0)continue;
+    if(curMode==='jugger'&&b.isJuggernaut)continue; // juggernaut never flees
+    for(const tp of p.pieces){
+      for(const mp of b.pieces){
+        if(tp.mass>mp.mass*dangerMargin){
+          const d=dist(tp.x,tp.y,mp.x,mp.y);
+          const range=320+mToR(tp.mass)*fleeRadiusMul;
+          if(d<range&&d<threatDist){threatDist=d;biggestThreat=tp;threatPiece=mp;}
+        }
       }
     }
   }
 
-  // ── PRIORITÄT 0.5: MERGE-REFLEX ─────────────────────────────
-  if(b.pieces.length>1&&b.pieces.every(pc=>pc.mergeTimer===0)){
-    b.target.x=cen.x; b.target.y=cen.y; return;
+  if(biggestThreat){
+    const criticalShare=threatPiece.mass/myMass;
+    if(criticalShare>(0.55-aggr*.25)||myMass<80){
+      let fx=cen.x+(cen.x-biggestThreat.x)*2.8;
+      let fy=cen.y+(cen.y-biggestThreat.y)*2.8;
+      b.target.x=fx; b.target.y=fy; clampTgt(b.target); return;
+    }
   }
 
-  // ── PRIORITÄT 1: BEUTE JAGEN ─────────────────────────────────
-  let bestPrey=null, bestScore=-Infinity;
+  const huntRange=900+aggr*900;
+  let bestPrey=null, bestScore=-Infinity, bestPreyOwner=null;
+  const huntRatio=1.32-aggr*.22;
   for(const p of players){
-    if(p===b||p.dead) continue;
-    if(curMode==='teams'&&p.teamId===b.teamId&&b.teamId>=0) continue;
+    if(p===b||p.dead)continue;
+    if(curMode==='teams'&&p.teamId===b.teamId&&b.teamId>=0)continue;
+    if(curMode==='reverse') { /* reverse: hunt bigger */ }
     const pc2=pCenter(p);
-    if(dist(cen.x,cen.y,pc2.x,pc2.y)>1200) continue;
+    if(dist(cen.x,cen.y,pc2.x,pc2.y)>huntRange)continue;
     for(const tp of p.pieces){
-      if(big.mass<=tp.mass*1.18) continue;
+      let canHunt=false;
+      if(curMode==='reverse') canHunt=(tp.mass>big.mass*1.15);
+      else canHunt=(big.mass>tp.mass*huntRatio);
+      if(!canHunt)continue;
       const d=dist(tp.x,tp.y,cen.x,cen.y);
-      const score=(tp.mass*2.5)/(d+1);
-      if(score>bestScore){bestScore=score;bestPrey=tp;}
+      const score=(tp.mass*2.6)/(d+1)*(1+aggr*.4);
+      if(score>bestScore){bestScore=score;bestPrey=tp;bestPreyOwner=p;}
     }
   }
 
   if(bestPrey){
-    b.target.x=bestPrey.x; b.target.y=bestPrey.y;
-
-    if(b.pieces.length<cfg.maxPieces-2){
+    if(intel>0.4){
+      const leadX=bestPreyOwner.target.x-bestPrey.x, leadY=bestPreyOwner.target.y-bestPrey.y;
+      const ld=Math.hypot(leadX,leadY)||1;
+      b.target.x=bestPrey.x+(leadX/ld)*40*intel;
+      b.target.y=bestPrey.y+(leadY/ld)*40*intel;
+    } else { b.target.x=bestPrey.x; b.target.y=bestPrey.y; }
+    if(freeSlots>1){
       const m2=big.mass/2, m4=big.mass/4, m8=big.mass/8;
-      const ratio=1.20;
-      if(m8>bestPrey.mass*ratio&&b.pieces.length+8<=cfg.maxPieces){
-        multiSplit(b,3);
-      } else if(m4>bestPrey.mass*ratio&&b.pieces.length+4<=cfg.maxPieces){
-        multiSplit(b,2);
-      } else if(m2>bestPrey.mass*ratio){
-        splitPlayer(b);
+      const splitRatio=1.15+(1-aggr)*.15;
+      const closeRange=260+mToR(big.mass)*1.4;
+      if(dist(bestPrey.x,bestPrey.y,cen.x,cen.y)<closeRange*2.2){
+        if(m8>bestPrey.mass*splitRatio&&freeSlots>=8&&aggr>0.5) multiSplit(b,3);
+        else if(m4>bestPrey.mass*splitRatio&&freeSlots>=4) multiSplit(b,2);
+        else if(m2>bestPrey.mass*splitRatio&&freeSlots>=1) splitPlayer(b);
       }
     }
     clampTgt(b.target); return;
   }
 
-  // ── PRIORITÄT 2: VIREN ANVISIEREN ────────────────────────────
-  if(big.mass>=135&&b.pieces.length<cfg.maxPieces-3&&curMode!=='nano'){
-    let nv=null, nd=700;
-    for(const v of viruses){
-      const d=dist(v.x,v.y,cen.x,cen.y);
-      if(d<nd){nd=d;nv=v;}
-    }
-    if(nv){b.target.x=nv.x;b.target.y=nv.y;clampTgt(b.target);return;}
+  if(b.pieces.length>1&&b.pieces.every(pc=>pc.mergeTimer===0)){
+    b.target.x=cen.x; b.target.y=cen.y;
   }
 
-  // ── PRIORITÄT 3: FUTTER ESSEN ─────────────────────────────────
+  if(big.mass>=135&&freeSlots>3&&curMode!=='gold'){
+    let nv=null, nd=700+aggr*300;
+    for(const v of viruses){ const d=dist(v.x,v.y,cen.x,cen.y); if(d<nd){nd=d;nv=v;} }
+    if(nv&&intel>0.3){b.target.x=nv.x;b.target.y=nv.y;clampTgt(b.target);return;}
+  }
+
   let bf=null, fd=Infinity;
   const sample=Math.min(60,foods.length);
   for(let i=0;i<sample;i++){
@@ -776,7 +807,7 @@ function botUpdate(b,now){
 }
 function clampTgt(t){const W2=WW();t.x=clamp(t.x,100,W2-100);t.y=clamp(t.y,100,W2-100);}
 
-// ── EATING / COLLISION ────────────────────────────────────────────────
+// ── EATING / COLLISION ────────────────────────────────────────
 function eatFood(){
   for(const p of players){
     if(p.dead)continue;
@@ -794,6 +825,18 @@ function eatFood(){
         const e=ejected[i];
         if(e.age<18)continue;
         if(d2(c.x,c.y,e.x,e.y)<r2){c.mass+=e.mass;ejected.splice(i,1);}
+      }
+      // Gold food
+      if(curMode==='gold'){
+        for(let i=goldFoods.length-1;i>=0;i--){
+          const g=goldFoods[i];
+          if(dist(c.x,c.y,g.x,g.y)<r+g.r){
+            c.mass+=g.mass;
+            p.goldCount=(p.goldCount||0)+g.value;
+            if(cfg.particles) spawnP(g.x,g.y,'#ffd740',16);
+            goldFoods.splice(i,1);
+          }
+        }
       }
     }
   }
@@ -827,6 +870,53 @@ function virusHit(){
   }
 }
 
+// ── VIRUS SHOOTING (10 hits = new virus shot) ─────────────────
+function checkEjectedVirus(){
+  // Update moving viruses first
+  const W2=WW();
+  for(const v of viruses){
+    if(v.moving){
+      v.x+=v.vx; v.y+=v.vy;
+      v.vx*=0.93; v.vy*=0.93;
+      v.x=clamp(v.x,50,W2-50); v.y=clamp(v.y,50,W2-50);
+      if(v.x<=50||v.x>=W2-50){v.vx*=-0.7;}
+      if(v.y<=50||v.y>=W2-50){v.vy*=-0.7;}
+      if(Math.hypot(v.vx,v.vy)<0.4) v.moving=false;
+    }
+  }
+  // Check ejected vs virus collisions
+  for(let vi=0;vi<viruses.length;vi++){
+    const v=viruses[vi];
+    if(!v.feedCount) v.feedCount=0;
+    const vr=mToR(v.mass);
+    for(let ei=ejected.length-1;ei>=0;ei--){
+      const e=ejected[ei];
+      if(e.age<8)continue;
+      if(dist(e.x,e.y,v.x,v.y)<vr+mToR(e.mass)*.8){
+        const dx=e.vx, dy=e.vy;
+        v.feedCount++;
+        v.lastHitVx=dx; v.lastHitVy=dy;
+        v.mass=Math.min(180,v.mass+e.mass*.5);
+        ejected.splice(ei,1);
+        if(v.feedCount>=10){
+          v.feedCount=0;
+          const ld=Math.hypot(v.lastHitVx,v.lastHitVy)||1;
+          const spd=20;
+          viruses.push({
+            x:v.x,y:v.y,
+            vx:(v.lastHitVx/ld)*spd,
+            vy:(v.lastHitVy/ld)*spd,
+            mass:100,color:'#33d17a',feedCount:0,moving:true
+          });
+          v.mass=100; v.feedCount=0;
+          if(cfg.particles) spawnP(v.x,v.y,'#33d17a',12);
+        }
+        break;
+      }
+    }
+  }
+}
+
 function eatPlayers(){
   for(const p of players){
     if(p.dead)continue;
@@ -839,9 +929,21 @@ function eatPlayers(){
         if(dist(c.x,c.y,qc.x,qc.y)>r+mToR(pMass(q)))continue;
         for(let i=q.pieces.length-1;i>=0;i--){
           const t=q.pieces[i];
-          if(c.mass<t.mass*1.15)continue;
-          const eaten=(r-mToR(t.mass)*.45);
-          if(d2(c.x,c.y,t.x,t.y)<eaten*eaten){
+          let canEat=false;
+          if(curMode==='reverse'){
+            // smaller eats bigger
+            canEat=(c.mass*1.15<t.mass);
+          } else {
+            canEat=(c.mass>=t.mass*1.15);
+          }
+          if(!canEat)continue;
+          const eatingR=curMode==='reverse'?mToR(t.mass):r;
+          const eatDist=eatingR-(curMode==='reverse'?mToR(c.mass):mToR(t.mass))*.45;
+          if(d2(c.x,c.y,t.x,t.y)<eatDist*eatDist){
+            // Infect spreading
+            if(curMode==='infect'&&p.infected&&!q.infected){
+              infectBlobPlayer(q);
+            }
             c.mass+=t.mass;
             if(cfg.particles) spawnP(t.x,t.y,q.color,16);
             q.pieces.splice(i,1);
@@ -858,8 +960,10 @@ function applyDecay(dt){
   for(const p of players){
     if(p.dead)continue;
     for(const c of p.pieces){
-      if(curMode==='nano'&&c.mass<25)continue;
-      if(c.mass>150) c.mass -= c.mass * 0.002 * (cfg.massDecayRate/3) * (dt/1000) * decayMult();
+      if(c.mass>150) c.mass-=c.mass*0.002*(cfg.massDecayRate/3)*(dt/1000);
+      // Infection: faster decay for infected
+      if(curMode==='infect'&&p.infected&&c.mass>80)
+        c.mass-=c.mass*0.001*(dt/1000);
     }
   }
 }
@@ -869,7 +973,7 @@ function applyBR(dt){
   const elapsed=performance.now()-gameStart;
   if(elapsed>safeZone.shrinkDelay){
     const prog=Math.min(1,(elapsed-safeZone.shrinkDelay)/110000);
-    safeZone.r = safeZoneInitR + (safeZone.minR - safeZoneInitR) * prog;
+    safeZone.r=safeZoneInitR+(safeZone.minR-safeZoneInitR)*prog;
   }
   let outside=false;
   for(const p of players){
@@ -884,37 +988,72 @@ function applyBR(dt){
   document.getElementById('zoneWarn').style.display=outside?'block':'none';
 }
 
-function updateDom(dt){
-  if(curMode!=='dom')return;
+function updateKOTH(dt){
+  if(curMode!=='koth')return;
   for(const z of zones){
     const inZ=[];
     for(const p of players){
       if(p.dead)continue;
       const c=pCenter(p);
-      if(dist(c.x,c.y,z.x,z.y)<z.r+60) inZ.push(p);
-    }
-    if(inZ.length===1){
-      z.prog=Math.min(1,z.prog+.0018*(dt/16.67));
-      if(z.prog>=1&&z.owner!==inZ[0]){
-        z.owner=inZ[0]; z.color=inZ[0].color;
-        for(const c of inZ[0].pieces) c.mass+=18;
-        inZ[0].score++;
-      }
-    } else if(inZ.length===0&&z.prog>0){
-      z.prog=Math.max(0,z.prog-.001*(dt/16.67));
+      if(dist(c.x,c.y,z.x,z.y)<z.r) inZ.push(p);
     }
     z.inZ=inZ;
+    if(inZ.length===1){
+      z.owner=inZ[0]; z.color=inZ[0].color;
+      inZ[0].kothScore=(inZ[0].kothScore||0)+dt*0.001; // 1pt/sec per zone
+    } else if(inZ.length>1){
+      z.color='#ff9f43'; // contested
+    } else if(inZ.length===0){
+      // keep owner
+    }
   }
 }
 
+function updateMines(dt){
+  if(curMode!=='mine')return;
+  for(const m of mines){
+    if(!m.active){ m.cooldown-=dt; if(m.cooldown<=0)m.active=true; continue; }
+    for(const p of players){
+      if(p.dead)continue;
+      for(const c of p.pieces){
+        if(dist(c.x,c.y,m.x,m.y)<mToR(c.mass)+m.r){
+          m.active=false; m.cooldown=10000;
+          if(cfg.particles) spawnP(m.x,m.y,'#ff4757',24);
+          const splits=Math.min(4,cfg.maxPieces-p.pieces.length);
+          if(splits>0) multiSplit(p,2);
+          for(const cc of p.pieces) cc.mass=Math.max(10,cc.mass*.8);
+        }
+      }
+    }
+  }
+  while(mines.length<40) mines.push(mkMine());
+}
+
+function updateInfect(dt){
+  if(curMode!=='infect')return;
+  infectTimer-=dt;
+  const infected=players.filter(p=>!p.dead&&p.infected).length;
+  const total=players.filter(p=>!p.dead).length;
+  const banner=document.getElementById('infectBanner');
+  if(total>0){
+    banner.style.display='block';
+    banner.textContent=`🧟 ${infected}/${total} infiziert`;
+  }
+}
+
+function updateGold(){
+  if(curMode!=='gold')return;
+  while(goldFoods.length<25) goldFoods.push(mkGoldFood());
+}
+
 const CHAOS_EVENTS=[
-  {t:'💥 EXPLOSION!',   d:'Alle werden gesplittet!',  fn:()=>{for(const p of players)if(!p.dead)multiSplit(p,2);}},
-  {t:'🍔 BUFFET!',      d:'Futter-Regen!',            fn:()=>{const add=Math.min(600,cfg.foodCount);for(let i=0;i<add;i++)foods.push(mkFood());}},
-  {t:'💀 HUNGERSNOT!',  d:'Alles Futter verschwunden!',fn:()=>{foods.length=30;}},
-  {t:'🔄 MASSENSCHWUND',d:'Alle verlieren 35% Masse!', fn:()=>{for(const p of players)if(!p.dead)for(const c of p.pieces)c.mass*=.65;}},
-  {t:'🦠 VIRENFLUT!',   d:'Viren überall!',           fn:()=>{for(let i=0;i<30;i++)viruses.push(mkVirus());}},
-  {t:'👑 MASSENBOOST!', d:'Alle gewinnen 50% Masse!',  fn:()=>{for(const p of players)if(!p.dead)for(const c of p.pieces)c.mass*=1.5;}},
-  {t:'🌀 TELEPORT!',    d:'Alle werden teleportiert!', fn:()=>{
+  {t:'💥 EXPLOSION!',   d:'Alle werden gesplittet!',   fn:()=>{for(const p of players)if(!p.dead)multiSplit(p,2);}},
+  {t:'🍔 BUFFET!',      d:'Futter-Regen!',             fn:()=>{const add=Math.min(600,cfg.foodCount);for(let i=0;i<add;i++)foods.push(mkFood());}},
+  {t:'💀 HUNGERSNOT!',  d:'Alles Futter verschwunden!', fn:()=>{foods.length=30;}},
+  {t:'🔄 MASSENSCHWUND',d:'Alle verlieren 35% Masse!',  fn:()=>{for(const p of players)if(!p.dead)for(const c of p.pieces)c.mass*=.65;}},
+  {t:'🦠 VIRENFLUT!',   d:'Viren überall!',            fn:()=>{for(let i=0;i<30;i++)viruses.push(mkVirus());}},
+  {t:'👑 MASSENBOOST!', d:'Alle gewinnen 50% Masse!',   fn:()=>{for(const p of players)if(!p.dead)for(const c of p.pieces)c.mass*=1.5;}},
+  {t:'🌀 TELEPORT!',    d:'Alle werden teleportiert!',  fn:()=>{
     const W2=WW();
     for(const p of players)if(!p.dead){
       const nx=rand(400,W2-400),ny=rand(400,W2-400);
@@ -922,7 +1061,7 @@ const CHAOS_EVENTS=[
       p.target.x=nx; p.target.y=ny;
     }
   }},
-  {t:'⚡ SUPER SPLIT!', d:'Jeder verliert die Hälfte der Masse durch Splits!',fn:()=>{
+  {t:'⚡ SUPER SPLIT!', d:'Splits für alle!',fn:()=>{
     for(const p of players)if(!p.dead&&p.pieces.length<cfg.maxPieces-4)splitPlayer(p);
   }},
 ];
@@ -940,42 +1079,102 @@ function doChaos(){
 function respawnBots(){
   for(const p of players){
     if(p===me||!p.isBot||!p.dead)continue;
-    let tid=-1; if(curMode==='teams')tid=ri(2);
+    let tid=-1; if(curMode==='teams')tid=ri(4);
     const nb=mkPlayer(BOT_NAMES[ri(BOT_NAMES.length)],true,tid);
+    // Juggernaut never respawns normally
+    if(curMode==='jugger'&&p.isJuggernaut){
+      nb.isJuggernaut=true; nb.color='#ff9f43'; nb.name='⚡JUGGERNAUT';
+      nb.pieces=[mkPiece(nb,rand(500,WW()-500),rand(500,WW()-500),5000)];
+    }
     Object.assign(p,nb); p.dead=false;
+    if(curMode==='infect'&&Math.random()<0.4) infectBlobPlayer(p);
   }
 }
 
+function showWinner(name,desc){
+  winnerShown=true;
+  document.getElementById('winnerName').textContent=name;
+  document.getElementById('winnerDesc').textContent=desc;
+  document.getElementById('winnerBanner').style.display='block';
+}
+
 function checkWinCondition(){
-  if(winnerShown) return;
-  for(const p of players){
-    if(p.dead) continue;
-    if(pMass(p)>=cfg.winMass){
-      winnerShown=true;
-      document.getElementById('winnerName').textContent=p.name;
-      document.querySelector('#winnerBanner .wd').textContent=fmtMass(cfg.winMass)+' Masse erreicht! Neue Runde startet...';
-      document.getElementById('winnerBanner').style.display='block';
+  if(winnerShown)return;
+  const alive=players.filter(p=>!p.dead);
+
+  if(curMode==='br'){
+    if(alive.length<=1&&players.length>1){
+      const winner=alive[0];
+      showWinner(winner?winner.name:'—','Letzter Überlebender! Neue Runde...');
       setTimeout(()=>{
         document.getElementById('winnerBanner').style.display='none';
-        startGame(spectating);
-      },3500);
+        document.getElementById('brBanner').style.display='none';
+        spectating=false;
+        startGame(false);
+      },4000);
+    }
+    return;
+  }
+
+  if(curMode==='koth'){
+    for(const p of alive){
+      if((p.kothScore||0)>=KOTH_WIN){
+        showWinner(p.name,`${Math.floor(p.kothScore)} Punkte! Neue Runde...`);
+        setTimeout(()=>{ document.getElementById('winnerBanner').style.display='none'; startGame(spectating); },3500);
+        return;
+      }
+    }
+    return;
+  }
+
+  if(curMode==='gold'){
+    for(const p of alive){
+      if((p.goldCount||0)>=GOLD_WIN){
+        showWinner(p.name,`${p.goldCount} Goldkugeln gesammelt! Neue Runde...`);
+        setTimeout(()=>{ document.getElementById('winnerBanner').style.display='none'; startGame(spectating); },3500);
+        return;
+      }
+    }
+    return;
+  }
+
+  if(curMode==='infect'){
+    const clean=alive.filter(p=>!p.infected);
+    const infected=alive.filter(p=>p.infected);
+    if(clean.length===1&&infected.length>0){
+      showWinner(clean[0].name,'Letzter Sauberer! Neue Runde...');
+      setTimeout(()=>{ document.getElementById('winnerBanner').style.display='none'; startGame(spectating); document.getElementById('infectBanner').style.display='none'; },3500);
+      return;
+    }
+    if(clean.length===0&&alive.length>0||infectTimer<=0){
+      showWinner('🧟 Das Virus','Alle infiziert! Neue Runde...');
+      setTimeout(()=>{ document.getElementById('winnerBanner').style.display='none'; startGame(spectating); document.getElementById('infectBanner').style.display='none'; },3500);
+      return;
+    }
+    return;
+  }
+
+  // Standard mass win (ffa, teams, reverse, jugger, mine, chaos)
+  for(const p of alive){
+    if(pMass(p)>=cfg.winMass){
+      showWinner(p.name,fmtMass(cfg.winMass)+' Masse! Neue Runde...');
+      setTimeout(()=>{ document.getElementById('winnerBanner').style.display='none'; startGame(spectating); },3500);
       return;
     }
   }
 }
 
-// ── PARTICLES ─────────────────────────────────────────────────────────
+// ── PARTICLES ─────────────────────────────────────────────────
 function spawnP(x,y,color,count){
-  if(particles.length>500) return;
+  if(particles.length>500)return;
   for(let i=0;i<count;i++){
     const ang=Math.random()*Math.PI*2, spd=rand(1.5,5.5);
-    particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,
-      color,life:rand(14,32),maxLife:32,r:rand(2,6)});
+    particles.push({x,y,vx:Math.cos(ang)*spd,vy:Math.sin(ang)*spd,color,life:rand(14,32),maxLife:32,r:rand(2,6)});
   }
 }
 
-// ── CAMERA ────────────────────────────────────────────────────────────
-function calcScale(p){ return Math.min(1.3,Math.pow(38/pMass(p),.22)*1.15); }
+// ── CAMERA ────────────────────────────────────────────────────
+function calcScale(p){ return Math.min(1.3,Math.pow(38/Math.max(1,pMass(p)),.22)*1.15); }
 function getCamTarget(){
   if(!spectating&&me&&!me.dead)
     return{cx:pCenter(me).x,cy:pCenter(me).y,s:calcScale(me),leader:me};
@@ -990,13 +1189,11 @@ function getCamTarget(){
 function updCam(){
   const t=getCamTarget();
   cam.tx=t.cx; cam.ty=t.cy; cam.ts=t.s;
-  cam.x+=(cam.tx-cam.x)*.09;
-  cam.y+=(cam.ty-cam.y)*.09;
-  cam.s+=(cam.ts-cam.s)*.07;
+  cam.x+=(cam.tx-cam.x)*.09; cam.y+=(cam.ty-cam.y)*.09; cam.s+=(cam.ts-cam.s)*.07;
 }
 function toSC(x,y){return[(x-cam.x)*cam.s+W/2,(y-cam.y)*cam.s+H/2];}
 
-// ── RENDERING ─────────────────────────────────────────────────────────
+// ── RENDERING ─────────────────────────────────────────────────
 function drawGrid(){
   if(!cfg.grid)return;
   ctx.strokeStyle='rgba(0,0,0,0.07)'; ctx.lineWidth=1;
@@ -1007,8 +1204,7 @@ function drawGrid(){
   for(let x=sx;x<ex;x+=step){const px=(x-cam.x)*cam.s+W/2;ctx.moveTo(px,0);ctx.lineTo(px,H);}
   for(let y=sy;y<ey;y+=step){const py=(y-cam.y)*cam.s+H/2;ctx.moveTo(0,py);ctx.lineTo(W,py);}
   ctx.stroke();
-  const bx=(0-cam.x)*cam.s+W/2;
-  const by=(0-cam.y)*cam.s+H/2;
+  const bx=(0-cam.x)*cam.s+W/2, by=(0-cam.y)*cam.s+H/2;
   ctx.strokeStyle='#e53935'; ctx.lineWidth=6;
   ctx.strokeRect(bx,by,WW()*cam.s,WW()*cam.s);
 }
@@ -1025,34 +1221,31 @@ function drawBR(){
   ctx.globalCompositeOperation='destination-out';
   ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
   ctx.globalCompositeOperation='source-over';
-  ctx.strokeStyle='#ff6f00'; ctx.lineWidth=4;
-  ctx.setLineDash([12,8]);
+  ctx.strokeStyle='#ff6f00'; ctx.lineWidth=4; ctx.setLineDash([12,8]);
   ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.stroke();
   ctx.setLineDash([]);
   ctx.restore();
 }
 
 function drawZones(){
-  if(curMode!=='dom')return;
+  if(curMode!=='koth')return;
   for(const z of zones){
-    const sx=(z.x-cam.x)*cam.s+W/2;
-    const sy=(z.y-cam.y)*cam.s+H/2;
-    const r=z.r*cam.s;
+    const sx=(z.x-cam.x)*cam.s+W/2, sy=(z.y-cam.y)*cam.s+H/2, r=z.r*cam.s;
     ctx.save();
-    ctx.globalAlpha=.2+z.prog*.2;
+    ctx.globalAlpha=.18;
     ctx.fillStyle=z.color;
     ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill();
-    ctx.globalAlpha=.75;
+    ctx.globalAlpha=.8;
     ctx.strokeStyle=z.color; ctx.lineWidth=3;
     ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.stroke();
-    if(z.prog>0&&z.prog<1){
-      ctx.globalAlpha=1; ctx.strokeStyle=z.inZ?.[0]?.color||'#fff'; ctx.lineWidth=5;
-      ctx.beginPath(); ctx.arc(sx,sy,r*.8,-Math.PI/2,-Math.PI/2+z.prog*Math.PI*2); ctx.stroke();
-    }
     if(z.owner){
-      ctx.globalAlpha=1; ctx.fillStyle='#fff'; ctx.font=`bold ${Math.max(11,r*.18)}px Arial`;
+      ctx.globalAlpha=1; ctx.fillStyle='#fff';
+      ctx.font=`bold ${Math.max(11,r*.2)}px Arial`;
       ctx.textAlign='center'; ctx.textBaseline='middle';
       ctx.fillText(z.owner.name,sx,sy);
+      ctx.font=`${Math.max(9,r*.15)}px Arial`;
+      ctx.fillStyle='rgba(255,255,255,.7)';
+      ctx.fillText(Math.floor(z.owner.kothScore||0)+'pts',sx,sy+r*.28);
     }
     ctx.restore();
   }
@@ -1060,18 +1253,63 @@ function drawZones(){
 
 function drawFood(){
   for(const f of foods){
-    const sx=(f.x-cam.x)*cam.s+W/2;
-    const sy=(f.y-cam.y)*cam.s+H/2;
+    const sx=(f.x-cam.x)*cam.s+W/2, sy=(f.y-cam.y)*cam.s+H/2;
     if(sx<-8||sy<-8||sx>W+8||sy>H+8)continue;
     ctx.fillStyle=f.color;
     ctx.beginPath(); ctx.arc(sx,sy,Math.max(2,f.r*cam.s),0,Math.PI*2); ctx.fill();
   }
 }
 
+function drawGoldFood(){
+  if(curMode!=='gold')return;
+  const t=performance.now()*.003;
+  for(const g of goldFoods){
+    const sx=(g.x-cam.x)*cam.s+W/2, sy=(g.y-cam.y)*cam.s+H/2;
+    const r=g.r*cam.s;
+    if(sx<-r||sy<-r||sx>W+r||sy>H+r)continue;
+    ctx.save();
+    ctx.shadowColor='#ffd740'; ctx.shadowBlur=10+Math.sin(t)*5;
+    const grad=ctx.createRadialGradient(sx-r*.25,sy-r*.25,0,sx,sy,r);
+    grad.addColorStop(0,'#fff9c4'); grad.addColorStop(1,'#ff9800');
+    ctx.fillStyle=grad;
+    ctx.strokeStyle='#ffd740'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,.5)';
+    ctx.font=`bold ${Math.max(9,r*.7)}px Arial`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⭐',sx,sy);
+    ctx.restore();
+  }
+}
+
+function drawMines(){
+  if(curMode!=='mine')return;
+  for(const m of mines){
+    if(!m.active)continue;
+    const sx=(m.x-cam.x)*cam.s+W/2, sy=(m.y-cam.y)*cam.s+H/2;
+    const r=m.r*cam.s;
+    if(sx<-r||sy<-r||sx>W+r||sy>H+r)continue;
+    ctx.save();
+    ctx.fillStyle='#2d0030'; ctx.strokeStyle='#ff1744'; ctx.lineWidth=2;
+    ctx.beginPath();
+    for(let i=0;i<16;i++){
+      const ang=(i/16)*Math.PI*2;
+      const rr=i%2===0?r:r*.72;
+      const x=sx+Math.cos(ang)*rr, y=sy+Math.sin(ang)*rr;
+      if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#ff1744';
+    ctx.font=`bold ${Math.max(8,r*.6)}px Arial`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('💣',sx,sy);
+    ctx.restore();
+  }
+}
+
 function drawEjected(){
   for(const e of ejected){
-    const sx=(e.x-cam.x)*cam.s+W/2;
-    const sy=(e.y-cam.y)*cam.s+H/2;
+    const sx=(e.x-cam.x)*cam.s+W/2, sy=(e.y-cam.y)*cam.s+H/2;
     ctx.fillStyle=e.color;
     ctx.beginPath(); ctx.arc(sx,sy,mToR(e.mass)*cam.s,0,Math.PI*2); ctx.fill();
   }
@@ -1079,8 +1317,7 @@ function drawEjected(){
 
 function drawViruses(){
   for(const v of viruses){
-    const sx=(v.x-cam.x)*cam.s+W/2;
-    const sy=(v.y-cam.y)*cam.s+H/2;
+    const sx=(v.x-cam.x)*cam.s+W/2, sy=(v.y-cam.y)*cam.s+H/2;
     const r=mToR(v.mass)*cam.s;
     if(sx<-r||sy<-r||sx>W+r||sy>H+r)continue;
     ctx.fillStyle=v.color; ctx.strokeStyle='#1b5e20'; ctx.lineWidth=2.5;
@@ -1093,6 +1330,13 @@ function drawViruses(){
       if(i===0)ctx.moveTo(x,y); else ctx.lineTo(x,y);
     }
     ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Show feed progress
+    if(v.feedCount>0){
+      ctx.fillStyle='rgba(255,255,255,.8)';
+      ctx.font=`bold ${Math.max(9,r*.4)}px Arial`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(v.feedCount+'/10',sx,sy);
+    }
   }
 }
 
@@ -1102,15 +1346,26 @@ function drawPlayers(){
   all.sort((a,b)=>a.c.mass-b.c.mass);
 
   for(const{p,c}of all){
-    const sx=(c.x-cam.x)*cam.s+W/2;
-    const sy=(c.y-cam.y)*cam.s+H/2;
+    const sx=(c.x-cam.x)*cam.s+W/2, sy=(c.y-cam.y)*cam.s+H/2;
     const r=mToR(c.mass)*cam.s;
     if(sx<-r||sy<-r||sx>W+r||sy>H+r)continue;
 
     ctx.fillStyle=p.color;
-    ctx.strokeStyle='rgba(0,0,0,.15)';
-    ctx.lineWidth=3;
+    ctx.strokeStyle='rgba(0,0,0,.15)'; ctx.lineWidth=3;
     ctx.beginPath(); ctx.arc(sx,sy,r,0,Math.PI*2); ctx.fill(); ctx.stroke();
+
+    // Infection glow
+    if(curMode==='infect'&&p.infected){
+      const pulse=.4+Math.sin(performance.now()*.008)*.25;
+      ctx.strokeStyle=`rgba(50,200,50,${pulse})`; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.arc(sx,sy,r+3,0,Math.PI*2); ctx.stroke();
+    }
+    // Juggernaut glow
+    if(curMode==='jugger'&&p.isJuggernaut){
+      const pulse=.5+Math.sin(performance.now()*.005)*.3;
+      ctx.strokeStyle=`rgba(255,159,67,${pulse})`; ctx.lineWidth=5;
+      ctx.beginPath(); ctx.arc(sx,sy,r+4,0,Math.PI*2); ctx.stroke();
+    }
 
     if(r>16){
       if(cfg.showNames){
@@ -1136,8 +1391,7 @@ function drawPlayers(){
 function drawParticles(){
   if(!cfg.particles)return;
   for(const pt of particles){
-    const sx=(pt.x-cam.x)*cam.s+W/2;
-    const sy=(pt.y-cam.y)*cam.s+H/2;
+    const sx=(pt.x-cam.x)*cam.s+W/2, sy=(pt.y-cam.y)*cam.s+H/2;
     ctx.globalAlpha=pt.life/pt.maxLife;
     ctx.fillStyle=pt.color;
     ctx.beginPath(); ctx.arc(sx,sy,pt.r*cam.s,0,Math.PI*2); ctx.fill();
@@ -1146,17 +1400,17 @@ function drawParticles(){
 }
 
 function drawMinimap(){
-  const mm=document.getElementById('mm');
-  if(!cfg.minimap){mm.style.display='none';return;}
-  mm.style.display='block';
-  const S=118, W2=WW();
-  mctx.fillStyle='rgba(5,5,18,.85)'; mctx.fillRect(0,0,S,S);
-  if(curMode==='dom'){
+  const mmEl=document.getElementById('mm');
+  if(!cfg.minimap){mmEl.style.display='none';return;}
+  mmEl.style.display='block';
+  const S=108, W2=WW();
+  mctx.fillStyle='rgba(5,5,18,.88)'; mctx.fillRect(0,0,S,S);
+  if(curMode==='koth'){
     for(const z of zones){
       const mx=(z.x/W2)*S, my=(z.y/W2)*S;
       mctx.fillStyle=z.color||'#555';
-      mctx.globalAlpha=.7+z.prog*.3;
-      mctx.beginPath(); mctx.arc(mx,my,5,0,Math.PI*2); mctx.fill();
+      mctx.globalAlpha=.6;
+      mctx.beginPath(); mctx.arc(mx,my,6,0,Math.PI*2); mctx.fill();
       mctx.globalAlpha=1;
     }
   }
@@ -1174,43 +1428,109 @@ function drawMinimap(){
     mctx.beginPath(); mctx.arc(mx,my,mr,0,Math.PI*2); mctx.fill();
     if(p===me){mctx.strokeStyle='#fff';mctx.lineWidth=1;mctx.stroke();}
   }
-  const vx=((cam.x-W/2/cam.s)/W2)*S;
-  const vy=((cam.y-H/2/cam.s)/W2)*S;
+  const vx=((cam.x-W/2/cam.s)/W2)*S, vy=((cam.y-H/2/cam.s)/W2)*S;
   const vw=(W/cam.s/W2)*S, vh=(H/cam.s/W2)*S;
   mctx.strokeStyle='rgba(255,255,255,.35)'; mctx.lineWidth=1;
   mctx.strokeRect(vx,vy,vw,vh);
 }
 
 function render(){
-  ctx.fillStyle='#f5f5f5'; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle='#f0f0f0'; ctx.fillRect(0,0,W,H);
   drawGrid();
   if(curMode==='br') drawBR();
-  drawZones(); drawFood(); drawEjected(); drawViruses();
-  drawParticles(); drawPlayers();
+  drawZones(); drawFood(); drawGoldFood(); drawMines();
+  drawEjected(); drawViruses(); drawParticles(); drawPlayers();
   drawMinimap();
 }
 
-// ── HUD ───────────────────────────────────────────────────────────────
+// ── HUD ───────────────────────────────────────────────────────
 function updateHUD(){
   const ct=getCamTarget();
-  document.getElementById('mv').textContent=ct.leader?fmtMass(pMass(ct.leader)):'0';
+  const leader=ct.leader;
 
-  const ranked=players.filter(p=>!p.dead)
-    .map(p=>({n:p.name,m:pMass(p),c:p.color,isMe:p===me}))
-    .sort((a,b)=>b.m-a.m).slice(0,10);
-  document.getElementById('lbc').innerHTML=ranked.map((r,i)=>`
-    <div class="lbr">
-      <span class="rk">${i+1}</span>
-      <span class="dot" style="background:${r.c}"></span>
-      <span class="nm${r.isMe?' me':''}">${r.n}</span>
-      <span class="ms">${fmtMass(r.m)}</span>
-    </div>`).join('');
+  // Main mass display
+  if(curMode==='koth'&&leader){
+    document.getElementById('hudLbl').textContent='Punkte';
+    document.getElementById('mv').textContent=Math.floor(leader.kothScore||0);
+  } else if(curMode==='gold'&&leader){
+    document.getElementById('hudLbl').textContent='Gold';
+    document.getElementById('mv').textContent=(leader.goldCount||0)+'/'+GOLD_WIN;
+  } else {
+    document.getElementById('hudLbl').textContent='Masse';
+    document.getElementById('mv').textContent=leader?fmtMass(pMass(leader)):'0';
+  }
+
+  // Extra HUD line
+  const ex=document.getElementById('hudExtra');
+  if(curMode==='koth'&&leader){ ex.style.display='block'; ex.textContent='⏱ '+fmtMass(pMass(leader))+' Masse'; }
+  else if(curMode==='infect'){ ex.style.display='block'; ex.textContent='🧟 '+infectedSet.size+' infiziert'; }
+  else { ex.style.display='none'; }
+
+  // Leaderboard
+  let html='';
+  if(curMode==='teams'){
+    const teamTotals=[0,1,2,3].map(tid=>{
+      const members=players.filter(p=>!p.dead&&p.teamId===tid);
+      return{tid,mass:members.reduce((s,p)=>s+pMass(p),0),members};
+    }).sort((a,b)=>b.mass-a.mass);
+    html+=teamTotals.map(t=>`
+      <div class="lb-team-row">
+        <div class="lb-team-dot" style="background:${TEAM_MAIN[t.tid]}"></div>
+        <div class="lb-team-name">${TEAM_NAMES[t.tid]}</div>
+        <div class="lb-team-mass">${fmtMass(t.mass)}</div>
+      </div>`).join('');
+    const top5=players.filter(p=>!p.dead)
+      .map(p=>({n:p.name,m:pMass(p),c:p.color,isMe:p===me,tid:p.teamId}))
+      .sort((a,b)=>b.m-a.m).slice(0,5);
+    html+=`<div class="lb-div">Top Spieler</div>`;
+    html+=top5.map((r,i)=>`
+      <div class="lbr">
+        <span class="rk">${i+1}</span>
+        <span class="dot" style="background:${TEAM_MAIN[r.tid]??r.c}"></span>
+        <span class="nm${r.isMe?' me':''}">${r.n}</span>
+        <span class="ms">${fmtMass(r.m)}</span>
+      </div>`).join('');
+  } else if(curMode==='koth'){
+    const ranked=players.filter(p=>!p.dead)
+      .map(p=>({n:p.name,m:p.kothScore||0,c:p.color,isMe:p===me}))
+      .sort((a,b)=>b.m-a.m).slice(0,10);
+    html=ranked.map((r,i)=>`
+      <div class="lbr">
+        <span class="rk">${i+1}</span>
+        <span class="dot" style="background:${r.c}"></span>
+        <span class="nm${r.isMe?' me':''}">${r.n}</span>
+        <span class="ms">${Math.floor(r.m)}pts</span>
+      </div>`).join('');
+  } else if(curMode==='gold'){
+    const ranked=players.filter(p=>!p.dead)
+      .map(p=>({n:p.name,m:p.goldCount||0,c:p.color,isMe:p===me}))
+      .sort((a,b)=>b.m-a.m).slice(0,10);
+    html=ranked.map((r,i)=>`
+      <div class="lbr">
+        <span class="rk">${i+1}</span>
+        <span class="dot" style="background:${r.c}"></span>
+        <span class="nm${r.isMe?' me':''}">${r.n}</span>
+        <span class="ms">⭐${r.m}</span>
+      </div>`).join('');
+  } else {
+    const ranked=players.filter(p=>!p.dead)
+      .map(p=>({n:p.name,m:pMass(p),c:p.color,isMe:p===me}))
+      .sort((a,b)=>b.m-a.m).slice(0,10);
+    html=ranked.map((r,i)=>`
+      <div class="lbr">
+        <span class="rk">${i+1}</span>
+        <span class="dot" style="background:${r.c}"></span>
+        <span class="nm${r.isMe?' me':''}">${r.n}</span>
+        <span class="ms">${fmtMass(r.m)}</span>
+      </div>`).join('');
+  }
+  document.getElementById('lbc').innerHTML=html;
 
   const showTc=running&&!spectating&&me&&!me.dead&&(cfg.touchControls||isTouchDev());
   document.getElementById('tc').style.display=showTc?'flex':'none';
 }
 
-// ── GAME STEP ─────────────────────────────────────────────────────────
+// ── GAME STEP ─────────────────────────────────────────────────
 function step(dt){
   const n=performance.now();
   for(const p of players) if(p.isBot&&!p.dead) botUpdate(p,n);
@@ -1236,24 +1556,36 @@ function step(dt){
     if(pt.life<=0) particles.splice(i,1);
   }
 
+  checkEjectedVirus();
   eatFood(); virusHit(); eatPlayers(); applyDecay(dt);
   if(curMode==='br') applyBR(dt);
-  if(curMode==='dom') updateDom(dt);
+  if(curMode==='koth') updateKOTH(dt);
+  if(curMode==='mine') updateMines(dt);
+  if(curMode==='infect'){ updateInfect(dt); }
+  if(curMode==='gold') updateGold();
   if(curMode==='chaos'){ chaosCooldown-=dt; if(chaosCooldown<=0){doChaos();chaosCooldown=rand(11000,22000);} }
 
   for(const p of players) if(!p.dead){ const m=pMass(p); if(m>p.maxMass)p.maxMass=m; }
 
-  const tvc=curMode==='virus'?cfg.virusCount*4:cfg.virusCount;
-  while(viruses.length<tvc) viruses.push(mkVirus());
-  let replenished=0;
-  while(foods.length<cfg.foodCount&&replenished<100){foods.push(mkFood());replenished++;}
+  while(viruses.length<cfg.virusCount) viruses.push(mkVirus());
+  let rep=0;
+  while(foods.length<cfg.foodCount&&rep<100){foods.push(mkFood());rep++;}
 
   respawnBots();
   checkWinCondition();
+
   if(me&&me.dead&&running&&!winnerShown){ showDeath(); }
 }
 
 function showDeath(){
+  if(curMode==='br'){
+    // In BR: spectate rest of game
+    spectating=true;
+    running=true;
+    document.getElementById('brBanner').style.display='block';
+    return;
+  }
+  // Normal modes: show death screen, pause game
   running=false;
   const rank=players.map(p=>({n:p.name,m:p.maxMass})).sort((a,b)=>b.m-a.m)
     .findIndex(r=>r.n===me?.name)+1;
@@ -1265,7 +1597,7 @@ function showDeath(){
   document.getElementById('ds').style.display='flex';
 }
 
-// ── MAIN LOOP ─────────────────────────────────────────────────────────
+// ── MAIN LOOP ─────────────────────────────────────────────────
 let lastT=performance.now();
 function loop(t){
   const dt=Math.min(33,t-lastT); lastT=t;
@@ -1274,7 +1606,7 @@ function loop(t){
 }
 requestAnimationFrame(loop);
 
-// ── INPUT ─────────────────────────────────────────────────────────────
+// ── INPUT ─────────────────────────────────────────────────────
 function isTouchDev(){return navigator.maxTouchPoints>0||'ontouchstart'in window;}
 function doResize(){W=innerWidth;H=innerHeight;GC.width=W;GC.height=H;}
 addEventListener('resize',doResize); doResize();
@@ -1305,7 +1637,7 @@ bindBtn('bTh',()=>ejectMass(me));
 bindBtn('bDb',()=>multiSplit(me,2));
 bindBtn('bTr',()=>multiSplit(me,3));
 
-// ── MODE GRID BUILD ───────────────────────────────────────────────────
+// ── MODE GRID ─────────────────────────────────────────────────
 let selMode='ffa';
 const mgrid=document.getElementById('mgrid');
 MODES.forEach(m=>{
@@ -1320,7 +1652,7 @@ MODES.forEach(m=>{
   mgrid.appendChild(c);
 });
 
-// ── UI EVENTS ─────────────────────────────────────────────────────────
+// ── UI EVENTS ─────────────────────────────────────────────────
 function startGame(isSpec){
   curMode=selMode;
   const name=(document.getElementById('nin').value.trim()||'Spieler');
@@ -1338,25 +1670,25 @@ function startGame(isSpec){
 document.getElementById('playBtn').addEventListener('click',()=>startGame(false));
 document.getElementById('specBtn').addEventListener('click',()=>startGame(true));
 document.getElementById('stopSpec').addEventListener('click',()=>{
-  running=false;spectating=false;
+  running=false; spectating=false;
   document.getElementById('specBanner').style.display='none';
   document.getElementById('overlay').style.display='flex';
 });
-document.getElementById('respBtn').addEventListener('click',()=>{
-  document.getElementById('ds').style.display='none'; startGame(false);
-});
+// "Nochmal" = respawn in same game (NOT restart)
+document.getElementById('respBtn').addEventListener('click',()=>respawnPlayer());
 document.getElementById('menuBtn').addEventListener('click',()=>{
   running=false;
   document.getElementById('ds').style.display='none';
   document.getElementById('overlay').style.display='flex';
   document.getElementById('settingsBtn').classList.remove('vis');
+  document.getElementById('infectBanner').style.display='none';
 });
 document.getElementById('settingsBtn').addEventListener('click',()=>document.getElementById('sp').style.display='flex');
 document.getElementById('sCls').addEventListener('click',()=>document.getElementById('sp').style.display='none');
 document.getElementById('openSet').addEventListener('click',e=>{e.preventDefault();document.getElementById('sp').style.display='flex';});
 document.getElementById('sp').addEventListener('click',e=>{if(e.target===document.getElementById('sp'))document.getElementById('sp').style.display='none';});
 
-// ── SETTINGS BINDINGS ────────────────────────────────────────────────
+// ── SETTINGS BINDINGS ─────────────────────────────────────────
 function bndR(id,key,fmt){
   const el=document.getElementById(id),v=document.getElementById(id+'V');
   el.value=cfg[key]; v.textContent=fmt?fmt(cfg[key]):cfg[key];
@@ -1395,7 +1727,6 @@ bndT('sNmT','showNames');
 bndT('sMbT','showMassOnBlob');
 bndT('sMMT','minimap');
 bndT('sTcT','touchControls');
-
 </script>
 </body>
 </html>
