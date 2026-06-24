@@ -426,7 +426,7 @@ const MODES = [
   {id:'infect',  icon:'🧟', name:'Infektion',      desc:'Werde nicht infiziert!',       badge:'b-infect'},
   {id:'reverse', icon:'🔄', name:'Umgekehrt',      desc:'Klein frisst Groß!',           badge:'b-reverse'},
   {id:'jugger',  icon:'👊', name:'Juggernaut',     desc:'Einer gegen alle!',            badge:'b-jugger'},
-  {id:'gold',    icon:'⭐', name:'Goldfieber',     desc:'Sammle goldene Bälle (15 = Sieg)!', badge:'b-gold'},
+  {id:'gold',    icon:'⭐', name:'Goldfieber',     desc:'Sammle goldene Bälle (100 = Sieg)!', badge:'b-gold'},
   {id:'mine',    icon:'💣', name:'Minenfeld',      desc:'Vermeide die Minen!',          badge:'b-mine'  },
   {id:'duo',     icon:'👥', name:'Duo',            desc:'2er-Teams! Bleibt zusammen!',  badge:'b-duo'   },
   {id:'race',    icon:'🏁', name:'Massenrennen',   desc:'Erreiche zuerst die Zielmasse!',badge:'b-race' },
@@ -437,9 +437,9 @@ const MODES = [
 // ── SETTINGS ──────────────────────────────────────────────────
 const DEF = {
   foodCount:1500, virusCount:20, worldSize:5000,
-  startMass:50, startMassBot:60, foodMassVal:1, winMass:200000,
+  startMass:100, startMassBot:100, foodMassVal:1, winMass:200000,
   massDecay:true, massDecayRate:3, minSplitMass:36,
-  maxPieces:32, mergeTime:220, mergeThreshold:35, mergeMagnet:5,
+  maxPieces:32, mergeTime:220, mergeThreshold:35, mergeMagnet:0,
   speedMult:10, splitForce:14, ejectMass:12,
   virusSplit:true, virusMinMass:130, botCount:20, botAggression:8, botIntelligence:8,
   particles:true, grid:true, showNames:true, showMassOnBlob:true,
@@ -458,7 +458,7 @@ let mines=[], goldFoods=[];
 let infectedSet=new Set(), infectTimer=0;
 let juggernaut=null;
 const KOTH_WIN = 200;  // seconds equivalent in points
-const GOLD_WIN = 15;   // gold orbs to collect
+const GOLD_WIN = 100;   // gold orbs to collect
 
 const cam = {x:0,y:0,s:1,tx:0,ty:0,ts:1};
 const mouse = {x:W/2,y:H/2};
@@ -712,7 +712,7 @@ function ejectMass(p){
     const dx=p.target.x-c.x, dy=p.target.y-c.y;
     const d=Math.hypot(dx,dy)||1, r=mToR(c.mass);
     ejected.push({x:c.x+(dx/d)*r,y:c.y+(dy/d)*r,vx:(dx/d)*22,vy:(dy/d)*22,
-      mass:EJ,color:p.color,life:110,age:0});
+      mass:EJ,color:p.color,life:99999999999,age:0});
   }
 }
 
@@ -865,7 +865,7 @@ function botUpdate(b,now){
         }
       }
     }
-    if(bestVirusTarget&&bestVScore>0.15){
+   if(bestVirusTarget && bestVScore>2.5 && Math.random()<0.001){
       // Aim at virus to shoot it
       b.target.x=bestVirusTarget.v.x;
       b.target.y=bestVirusTarget.v.y;
