@@ -232,6 +232,14 @@ input.name-in:focus{border-color:var(--accent)}
 .b-koth{background:#c6a700}.b-chaos{background:#c62828}
 .b-infect{background:#2e7d32}.b-reverse{background:#0277bd}
 .b-jugger{background:#bf360c}.b-gold{background:#e65100}.b-mine{background:#4a148c}
+.b-duo{background:#9c27b0}.b-race{background:#0097a7}.b-zombie{background:#558b2f}.b-shrink{background:#37474f}
+
+/* Teams pie chart leaderboard */
+#teamPieWrap{margin-top:8px}
+#teamPieCanvas{display:block;margin:0 auto}
+.pie-legend{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px;justify-content:center}
+.pie-leg-item{display:flex;align-items:center;gap:4px;font-size:10.5px;font-weight:700}
+.pie-leg-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
 
 /* Responsive */
 @media (max-width: 768px) {
@@ -420,6 +428,10 @@ const MODES = [
   {id:'jugger',  icon:'👊', name:'Juggernaut',     desc:'Einer gegen alle!',            badge:'b-jugger'},
   {id:'gold',    icon:'⭐', name:'Goldfieber',     desc:'Sammle goldene Bälle (15 = Sieg)!', badge:'b-gold'},
   {id:'mine',    icon:'💣', name:'Minenfeld',      desc:'Vermeide die Minen!',          badge:'b-mine'  },
+  {id:'duo',     icon:'👥', name:'Duo',            desc:'2er-Teams! Bleibt zusammen!',  badge:'b-duo'   },
+  {id:'race',    icon:'🏁', name:'Massenrennen',   desc:'Erreiche zuerst die Zielmasse!',badge:'b-race' },
+  {id:'zombie',  icon:'🧠', name:'Zombie-Modus',   desc:'Zombies fressen Gehirne – überleg dir das!', badge:'b-zombie'},
+  {id:'shrink',  icon:'📉', name:'Schrumpfzone',   desc:'Jeder schrumpft – kämpf ums Überleben!', badge:'b-shrink'},
 ];
 
 // ── SETTINGS ──────────────────────────────────────────────────
@@ -500,10 +512,10 @@ function mkPiece(p,x,y,mass,vx=0,vy=0,mt=0){
 }
 function mkPlayer(name,isBot,teamId=-1){
   const W2=WW();
-  let color = teamId>=0 ? TEAM_COLS[teamId][ri(3)] : COLORS[ri(COLORS.length)];
+  let color = teamId>=0 ? TEAM_COLS[teamId%4][ri(3)] : COLORS[ri(COLORS.length)];
   const p={name,isBot,dead:false,color,teamId,pieces:[],
     target:{x:W2/2,y:W2/2},aiNext:0,kills:0,maxMass:0,score:0,
-    kothScore:0,goldCount:0,infected:false};
+    kothScore:0,goldCount:0,infected:false,duoMate:null};
   const x=rand(500,W2-500), y=rand(500,W2-500);
   p.pieces.push(mkPiece(p,x,y,initMass(isBot)));
   p.target.x=x; p.target.y=y;
@@ -547,8 +559,19 @@ function initGame(name, isSpec){
   for(let i=0;i<cfg.botCount;i++){
     let tid=-1;
     if(curMode==='teams') tid=i%4;
+    if(curMode==='duo') tid=Math.floor(i/2)%Math.ceil(cfg.botCount/2+1);
     const b=mkPlayer(shuffled[i%shuffled.length],true,tid);
+    if(curMode==='duo') b.color=TEAM_COLS[tid%4][1];
     players.push(b);
+  }
+  // Link duo mates (pairs)
+  if(curMode==='duo'){
+    for(let i=0;i<players.length-1;i+=2){
+      if(players[i]&&players[i+1]&&players[i].isBot&&players[i+1].isBot){
+        players[i].duoMate=players[i+1];
+        players[i+1].duoMate=players[i];
+      }
+    }
   }
 
   // Juggernaut: first bot becomes the juggernaut
@@ -564,8 +587,20 @@ function initGame(name, isSpec){
   if(!isSpec){
     let tid=-1;
     if(curMode==='teams') tid=ri(4);
+    if(curMode==='duo'){
+      tid=Math.ceil(cfg.botCount/2); // last team = player's duo
+    }
     me=mkPlayer(name||'Spieler',false,tid);
-    if(curMode==='teams') me.color=TEAM_COLS[me.teamId][0];
+    if(curMode==='teams') me.color=TEAM_COLS[me.teamId%4][0];
+    else if(curMode==='duo'){
+      me.color=TEAM_COLS[tid%4][0];
+      // Assign a bot as duo mate
+      const botMate=players.find(p=>p.isBot&&p.duoMate===null);
+      if(botMate){
+        me.duoMate=botMate; botMate.duoMate=me;
+        botMate.teamId=tid; botMate.color=TEAM_COLS[tid%4][2];
+      }
+    }
     else me.color='#1e88e5';
     players.push(me);
   } else { me=null; }
@@ -686,11 +721,13 @@ function botUpdate(b,now){
   if(now<b.aiNext)return;
   const intel=cfg.botIntelligence/10;
   const aggr=cfg.botAggression/10;
-  b.aiNext=now+rand(6,28)*(1.15-intel*.7)*(1.25-aggr*.55);
+  b.aiNext=now+rand(6,22)*(1.1-intel*.65)*(1.2-aggr*.5);
 
   const cen=pCenter(b), big=bigPiece(b), W2=WW();
   const myMass=pMass(b);
   const freeSlots=cfg.maxPieces-b.pieces.length;
+
+  // ── MODE AWARENESS ──────────────────────────────────────────
 
   // Infection mode: infected bots hunt specifically
   if(curMode==='infect'&&b.infected){
@@ -700,6 +737,16 @@ function botUpdate(b,now){
         const d=dist(cen.x,cen.y,pCenter(p).x,pCenter(p).y);
         return d<dist(cen.x,cen.y,pCenter(best).x,pCenter(best).y)?p:best;
       },targets[0]);
+      const tc=pCenter(t); b.target.x=tc.x; b.target.y=tc.y;
+      clampTgt(b.target); return;
+    }
+  }
+
+  // Zombie mode: zombie bots hunt others
+  if(curMode==='zombie'&&b.infected){
+    const targets=players.filter(p=>!p.dead&&!p.infected&&p!==b);
+    if(targets.length>0){
+      const t=targets.reduce((best,p)=>dist(cen.x,cen.y,pCenter(p).x,pCenter(p).y)<dist(cen.x,cen.y,pCenter(best).x,pCenter(best).y)?p:best,targets[0]);
       const tc=pCenter(t); b.target.x=tc.x; b.target.y=tc.y;
       clampTgt(b.target); return;
     }
@@ -720,7 +767,7 @@ function botUpdate(b,now){
   if(curMode==='gold'&&goldFoods.length>0){
     let ng=null,nd=Infinity;
     for(const g of goldFoods){ const d=dist(g.x,g.y,cen.x,cen.y); if(d<nd){nd=d;ng=g;} }
-    if(ng&&nd<600){b.target.x=ng.x;b.target.y=ng.y;clampTgt(b.target);return;}
+    if(ng&&nd<700){b.target.x=ng.x;b.target.y=ng.y;clampTgt(b.target);return;}
   }
 
   // Battle Royale zone avoidance
@@ -733,40 +780,109 @@ function botUpdate(b,now){
     }
   }
 
-  // Danger detection
-  const dangerMargin=1.32-aggr*.18, fleeRadiusMul=2.6-aggr*.9;
+  // Duo mode: stay near duo mate
+  if(curMode==='duo'&&b.duoMate&&!b.duoMate.dead){
+    const mateCen=pCenter(b.duoMate);
+    const dMate=dist(cen.x,cen.y,mateCen.x,mateCen.y);
+    if(dMate>350){
+      // Move toward mate if too far
+      b.target.x=mateCen.x+rand(-60,60); b.target.y=mateCen.y+rand(-60,60);
+      clampTgt(b.target); return;
+    }
+  }
+
+  // Race mode: bot aggressively eats food to grow
+  if(curMode==='race'){
+    // Still do normal flee/hunt but prioritize food more heavily
+  }
+
+  // ── DANGER DETECTION (all threats including LARGER pieces) ──
+  const dangerMargin=1.28-aggr*.15, fleeRadiusMul=2.8-aggr*.8;
   let biggestThreat=null, threatDist=Infinity, threatPiece=null;
   for(const p of players){
     if(p===b||p.dead)continue;
-    if(curMode==='teams'&&p.teamId===b.teamId&&b.teamId>=0)continue;
-    if(curMode==='jugger'&&b.isJuggernaut)continue; // juggernaut never flees
+    if((curMode==='teams'||curMode==='duo')&&p.teamId===b.teamId&&b.teamId>=0)continue;
+    if(curMode==='jugger'&&b.isJuggernaut)continue;
     for(const tp of p.pieces){
       for(const mp of b.pieces){
         if(tp.mass>mp.mass*dangerMargin){
           const d=dist(tp.x,tp.y,mp.x,mp.y);
-          const range=320+mToR(tp.mass)*fleeRadiusMul;
+          const range=300+mToR(tp.mass)*fleeRadiusMul;
           if(d<range&&d<threatDist){threatDist=d;biggestThreat=tp;threatPiece=mp;}
         }
       }
     }
   }
 
+  // ── SMART FLEE WITH SPLIT-ESCAPE ────────────────────────────
   if(biggestThreat){
-    const criticalShare=threatPiece.mass/myMass;
-    if(criticalShare>(0.55-aggr*.25)||myMass<80){
-      let fx=cen.x+(cen.x-biggestThreat.x)*2.8;
-      let fy=cen.y+(cen.y-biggestThreat.y)*2.8;
-      b.target.x=fx; b.target.y=fy; clampTgt(b.target); return;
+    const criticalShare=threatPiece?threatPiece.mass/myMass:1;
+    const isCritical=criticalShare>(0.5-aggr*.2)||myMass<90;
+    if(isCritical){
+      const dx=cen.x-biggestThreat.x, dy=cen.y-biggestThreat.y;
+      const d=Math.hypot(dx,dy)||1;
+      let fx=cen.x+(dx/d)*300;
+      let fy=cen.y+(dy/d)*300;
+      // Steer around world edges
+      if(fx<150) fx+=200; if(fy<150) fy+=200;
+      if(fx>W2-150) fx-=200; if(fy>W2-150) fy-=200;
+      b.target.x=fx; b.target.y=fy; clampTgt(b.target);
+
+      // Split-escape: if threat is very close and we're big enough, split away
+      if(intel>0.4&&threatDist<mToR(biggestThreat.mass)*2.2&&myMass>cfg.minSplitMass*2.5&&freeSlots>=2){
+        // Only split-escape if the split pieces won't be eaten
+        const splitMass=myMass/2;
+        if(splitMass*1.3<biggestThreat.mass||splitMass>biggestThreat.mass*1.3){
+          // Don't split if the half would still be eaten and we're small
+        } else {
+          splitPlayer(b);
+        }
+      }
+      return;
     }
   }
 
-  const huntRange=900+aggr*900;
+  // ── VIRUS SHOOTING at enemies ────────────────────────────────
+  // If there's an enemy behind a virus, shoot at it
+  if(intel>0.5&&freeSlots>=2){
+    let bestVirusTarget=null, bestVScore=-Infinity;
+    for(const v of viruses){
+      const vd=dist(v.x,v.y,cen.x,cen.y);
+      if(vd>800) continue;
+      // Check if any enemy is behind this virus relative to bot
+      for(const p of players){
+        if(p===b||p.dead)continue;
+        if((curMode==='teams'||curMode==='duo')&&p.teamId===b.teamId&&b.teamId>=0)continue;
+        const pc=pCenter(p);
+        const pd=dist(pc.x,pc.y,cen.x,cen.y);
+        // Virus should be roughly between bot and enemy
+        const virusOnLine=dist(v.x,v.y,pc.x,pc.y)<mToR(pMass(p))*3+120;
+        const enemyBehindVirus=pd>vd*.7;
+        const aimScore=(pMass(p)/(vd+1))*2;
+        if(virusOnLine&&enemyBehindVirus&&aimScore>bestVScore&&big.mass>cfg.minSplitMass*1.5){
+          bestVScore=aimScore;
+          bestVirusTarget={v,enemy:p};
+        }
+      }
+    }
+    if(bestVirusTarget&&bestVScore>0.15){
+      // Aim at virus to shoot it
+      b.target.x=bestVirusTarget.v.x;
+      b.target.y=bestVirusTarget.v.y;
+      ejectMass(b);
+      clampTgt(b.target);
+      // If we have 10 hits ready, this will auto-shoot
+      return;
+    }
+  }
+
+  // ── HUNT / PREY SELECTION ────────────────────────────────────
+  const huntRange=850+aggr*950;
   let bestPrey=null, bestScore=-Infinity, bestPreyOwner=null;
-  const huntRatio=1.32-aggr*.22;
+  const huntRatio=1.28-aggr*.2;
   for(const p of players){
     if(p===b||p.dead)continue;
-    if(curMode==='teams'&&p.teamId===b.teamId&&b.teamId>=0)continue;
-    if(curMode==='reverse') { /* reverse: hunt bigger */ }
+    if((curMode==='teams'||curMode==='duo')&&p.teamId===b.teamId&&b.teamId>=0)continue;
     const pc2=pCenter(p);
     if(dist(cen.x,cen.y,pc2.x,pc2.y)>huntRange)continue;
     for(const tp of p.pieces){
@@ -774,25 +890,33 @@ function botUpdate(b,now){
       if(curMode==='reverse') canHunt=(tp.mass>big.mass*1.15);
       else canHunt=(big.mass>tp.mass*huntRatio);
       if(!canHunt)continue;
+      // Check no bigger piece of the same player is close (don't hunt a small piece of a giant)
+      const ownerMass=pMass(p);
+      if(curMode!=='reverse'&&ownerMass>myMass*1.5) continue; // skip if owner is way bigger (trap avoidance)
       const d=dist(tp.x,tp.y,cen.x,cen.y);
-      const score=(tp.mass*2.6)/(d+1)*(1+aggr*.4);
+      const score=(tp.mass*2.8)/(d+1)*(1+aggr*.45);
       if(score>bestScore){bestScore=score;bestPrey=tp;bestPreyOwner=p;}
     }
   }
 
   if(bestPrey){
-    if(intel>0.4){
+    // Predictive targeting
+    if(intel>0.35&&bestPreyOwner){
       const leadX=bestPreyOwner.target.x-bestPrey.x, leadY=bestPreyOwner.target.y-bestPrey.y;
       const ld=Math.hypot(leadX,leadY)||1;
-      b.target.x=bestPrey.x+(leadX/ld)*40*intel;
-      b.target.y=bestPrey.y+(leadY/ld)*40*intel;
+      b.target.x=bestPrey.x+(leadX/ld)*50*intel;
+      b.target.y=bestPrey.y+(leadY/ld)*50*intel;
     } else { b.target.x=bestPrey.x; b.target.y=bestPrey.y; }
+
+    // Smart split-hunt: only split for SMALL prey, not for large blobs
     if(freeSlots>1){
       const m2=big.mass/2, m4=big.mass/4, m8=big.mass/8;
-      const splitRatio=1.15+(1-aggr)*.15;
-      const closeRange=260+mToR(big.mass)*1.4;
-      if(dist(bestPrey.x,bestPrey.y,cen.x,cen.y)<closeRange*2.2){
-        if(m8>bestPrey.mass*splitRatio&&freeSlots>=8&&aggr>0.5) multiSplit(b,3);
+      const splitRatio=1.18+(1-aggr)*.12;
+      const closeRange=240+mToR(big.mass)*1.3;
+      const preyDist=dist(bestPrey.x,bestPrey.y,cen.x,cen.y);
+      // Only split if prey is clearly smaller (avoid splitting into a larger blob)
+      if(preyDist<closeRange*2&&bestPrey.mass<myMass*.4){
+        if(m8>bestPrey.mass*splitRatio&&freeSlots>=8&&aggr>0.55) multiSplit(b,3);
         else if(m4>bestPrey.mass*splitRatio&&freeSlots>=4) multiSplit(b,2);
         else if(m2>bestPrey.mass*splitRatio&&freeSlots>=1) splitPlayer(b);
       }
@@ -800,18 +924,28 @@ function botUpdate(b,now){
     clampTgt(b.target); return;
   }
 
-  if(b.pieces.length>1&&b.pieces.every(pc=>pc.mergeTimer===0)){
-    b.target.x=cen.x; b.target.y=cen.y;
+  // ── MERGE SELF when safe ─────────────────────────────────────
+  if(b.pieces.length>1&&b.pieces.every(pc=>pc.mergeTimer===0)&&!biggestThreat){
+    b.target.x=cen.x; b.target.y=cen.y; // move cursor to center = merge tendency
   }
 
-  if(big.mass>=135&&freeSlots>3&&curMode!=='gold'){
-    let nv=null, nd=700+aggr*300;
-    for(const v of viruses){ const d=dist(v.x,v.y,cen.x,cen.y); if(d<nd){nd=d;nv=v;} }
-    if(nv&&intel>0.3){b.target.x=nv.x;b.target.y=nv.y;clampTgt(b.target);return;}
+  // ── MINE AVOIDANCE ───────────────────────────────────────────
+  if(curMode==='mine'&&mines.length>0){
+    for(const m of mines){
+      if(!m.active)continue;
+      const md=dist(m.x,m.y,cen.x,cen.y);
+      if(md<mToR(myMass)+m.r+80){
+        const dx=cen.x-m.x, dy=cen.y-m.y;
+        b.target.x=cen.x+(dx/Math.hypot(dx,dy)||0)*200;
+        b.target.y=cen.y+(dy/Math.hypot(dx,dy)||0)*200;
+        clampTgt(b.target); return;
+      }
+    }
   }
 
+  // ── FOOD SEEKING ─────────────────────────────────────────────
   let bf=null, fd=Infinity;
-  const sample=Math.min(60,foods.length);
+  const sample=Math.min(80,foods.length);
   for(let i=0;i<sample;i++){
     const f=foods[ri(foods.length)]; if(!f)continue;
     const d=dist(f.x,f.y,cen.x,cen.y);
@@ -940,6 +1074,7 @@ function eatPlayers(){
       for(const q of players){
         if(q===p||q.dead)continue;
         if(curMode==='teams'&&q.teamId===p.teamId&&p.teamId>=0)continue;
+        if(curMode==='duo'&&q.teamId===p.teamId&&p.teamId>=0)continue;
         const qc=pCenter(q);
         if(dist(c.x,c.y,qc.x,qc.y)>r+mToR(pMass(q)))continue;
         for(let i=q.pieces.length-1;i>=0;i--){
@@ -979,6 +1114,9 @@ function applyDecay(dt){
       // Infection: faster decay for infected
       if(curMode==='infect'&&p.infected&&c.mass>80)
         c.mass-=c.mass*0.001*(dt/1000);
+      // Shrink: everyone constantly shrinks
+      if(curMode==='shrink'&&c.mass>40)
+        c.mass-=c.mass*0.0045*(dt/1000);
     }
   }
 }
